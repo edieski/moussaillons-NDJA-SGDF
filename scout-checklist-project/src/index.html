@@ -64,24 +64,43 @@
         <div class="fey-stats">
             <div class="fey-stat">
                 <span class="fey-stat-number" id="checkedCount">0</span>
-                <span class="fey-stat-label">Items cochés</span>
+                <span class="fey-stat-label">🎒 Sac prêt</span>
             </div>
             <div class="fey-stat" style="background: linear-gradient(135deg, var(--c-forest-700), var(--c-forest-500));">
                 <span class="fey-stat-number" id="percentComplete">0%</span>
-                <span class="fey-stat-label">Progression</span>
+                <span class="fey-stat-label">🏕️ Aventure</span>
+            </div>
+            <div class="fey-stat" style="background: linear-gradient(135deg, #FF6B35, #FF8E53);">
+                <span class="fey-stat-number" id="tempsRestant">2j</span>
+                <span class="fey-stat-label">⏰ Départ</span>
             </div>
         </div>
 
-        <div class="fey-note">
-            <strong>📌 Pour les parents :</strong> Cliquez sur les liens "exemple 🔗" pour voir le matériel recommandé !
+        <div class="fey-card" style="background: linear-gradient(135deg, #E3F2FD, #BBDEFB); border-left: 6px solid #2196F3;">
+            <div class="fey-card-header">👨‍👩‍👧‍👦 Info Parents</div>
+            <div class="fey-note" style="background: transparent; border: none; margin: 0;">
+                <strong>📌 Astuce :</strong> Cliquez sur les liens "exemple 🔗" pour voir le matériel recommandé !<br>
+                <strong>⏰ Temps de préparation :</strong> Comptez 30-45 minutes pour tout vérifier.<br>
+                <strong>💾 Sauvegarde :</strong> Votre liste se sauvegarde automatiquement !
+            </div>
         </div>
 
-        <div class="fey-note">
-            <strong>🌤️ Météo ce week-end à Jambville :</strong> 9-10°C le matin, 18-19°C l'après-midi. Temps variable avec risque de pluie. ⚠️ Prévoir des vêtements chauds !
+        <div class="fey-card" style="background: linear-gradient(135deg, #FFF3E0, #FFE0B2); border-left: 6px solid #FF9800;">
+            <div class="fey-card-header">🌤️ Météo & Préparation</div>
+            <div class="fey-note" style="background: transparent; border: none; margin: 0;">
+                <strong>📍 Jambville ce week-end :</strong> 9-10°C le matin, 18-19°C l'après-midi<br>
+                <strong>🌧️ Prévu :</strong> Temps variable avec risque de pluie<br>
+                <strong>⚠️ Important :</strong> Prévoir des vêtements chauds et imperméables !
+            </div>
         </div>
 
-        <div class="fey-note" style="background: rgba(139, 90, 43, 0.1); border-left: 4px solid #8B5A2B;">
-            <strong>🎯 Principe de la zone de confort :</strong> Il faut 2 chaussettes à chaque fois parce qu'il pleut ! Une paire de base + une paire de rechange dans le sac. Les pieds mouillés = froid garanti.
+        <div class="fey-card" style="background: linear-gradient(135deg, #F3E5F5, #E1BEE7); border-left: 6px solid #9C27B0;">
+            <div class="fey-card-header">🎯 Règle d'Or Scout</div>
+            <div class="fey-note" style="background: transparent; border: none; margin: 0;">
+                <strong>🧦 Principe des 2 chaussettes :</strong> Toujours 2 paires !<br>
+                <strong>🦶 Pourquoi ?</strong> Une pour la journée + une de rechange pour le soir<br>
+                <strong>❄️ Rappel :</strong> Les pieds mouillés = froid garanti !
+            </div>
         </div>
 
         <div class="fey-card">
@@ -380,6 +399,27 @@
                     0% - Prêt pour l'aventure ?
                 </div>
             </div>
+            
+            <div class="fey-card" style="background: linear-gradient(135deg, #C8E6C9, #A5D6A7); border-left: 6px solid #4CAF50; margin-top: 2rem;">
+                <div class="fey-card-header">🏆 Défis Bonus</div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                    <div style="background: white; padding: 1rem; border-radius: 8px; border: 2px solid var(--c-ink-900); text-align: center;">
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">🎒</div>
+                        <strong>Défi Sac</strong><br>
+                        <small>Range tout en 5 minutes</small>
+                    </div>
+                    <div style="background: white; padding: 1rem; border-radius: 8px; border: 2px solid var(--c-ink-900); text-align: center;">
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">⛺</div>
+                        <strong>Défi Tente</strong><br>
+                        <small>Monte ta tente vite !</small>
+                    </div>
+                    <div style="background: white; padding: 1rem; border-radius: 8px; border: 2px solid var(--c-ink-900); text-align: center;">
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">🌧️</div>
+                        <strong>Défi Pluie</strong><br>
+                        <small>Reste au sec !</small>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- PAGE 2: TENTE -->
@@ -388,12 +428,22 @@
                 ⛺ Comment monter une tente canadienne ?
             </div>
             
-            <div class="fey-video">
-                <h3 style="font-family: 'Patrick Hand', cursive; color: var(--c-orange-600); margin-bottom: 1rem; font-size: 1.5rem;">
-                    📹 Vidéo tutoriel
-                </h3>
-                <div class="fey-video-wrapper">
-                    <iframe src="https://www.youtube.com/embed/1s6PgZ0o-vk" frameborder="0" allowfullscreen></iframe>
+            <div class="fey-card" style="margin-bottom: 2rem;">
+                <div class="fey-card-header">📹 Tutoriel Vidéo</div>
+                <div style="background: linear-gradient(135deg, #4CAF50, #45a049); color: white; padding: 2rem; border-radius: var(--r-md); text-align: center; border: 3px solid var(--c-ink-900);">
+                    <div style="font-size: 4rem; margin-bottom: 1rem;">🎬</div>
+                    <h3 style="font-family: 'Patrick Hand', cursive; font-size: 1.5rem; margin-bottom: 1rem;">
+                        Vidéo de Montage de Tente
+                    </h3>
+                    <p style="margin-bottom: 1.5rem; font-size: 1.1rem;">
+                        Regarde cette vidéo pour apprendre à monter ta tente étape par étape !
+                    </p>
+                    <button class="fey-btn" onclick="ouvrirVideoTutorial()" style="background: #FF6B35; font-size: 1.2rem; padding: 1rem 2rem;">
+                        📺 Regarder la Vidéo
+                    </button>
+                    <div style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.9;">
+                        💡 Ou joue au jeu interactif ci-dessous pour t'entraîner !
+                    </div>
                 </div>
             </div>
 
@@ -443,6 +493,23 @@
             <div class="fey-note">
                 <strong>💡 Astuce :</strong> Creuse une petite rigole autour de la tente pour évacuer l'eau de pluie !
             </div>
+
+            <div class="fey-card" style="margin-top: 2rem;">
+                <div class="fey-card-header">🎮 Jeu Interactif</div>
+                <div class="fey-note">
+                    <strong>🎯 Prêt à mettre en pratique ?</strong><br>
+                    Teste tes connaissances avec notre jeu interactif de montage de tente !
+                </div>
+                <div style="text-align: center; margin-top: 1.5rem;">
+                    <button class="fey-btn" onclick="ouvrirJeuTente()" style="font-size: 1.2rem; padding: 1rem 2rem;">
+                        🎮 Jouer au Jeu de Tente 🎮
+                    </button>
+                </div>
+                <div class="fey-note" style="background: rgba(139, 90, 43, 0.1); border-left: 4px solid #8B5A2B; margin-top: 1rem;">
+                    <strong>🏆 Défi :</strong> Monte ta tente en 6 étapes et gagne des points !<br>
+                    <strong>🎵 Bonus :</strong> Découvre la chanson de la tente à la fin !
+                </div>
+            </div>
         </div>
 
         <!-- PAGE 3: INFOS -->
@@ -451,35 +518,64 @@
                 📱 Informations & Contact
             </div>
             
-            <div class="fey-qr-grid">
-                <div class="fey-qr-card">
-                    <h3>💬 Groupe WhatsApp</h3>
-                    <div class="fey-qr-code">📱</div>
-                    <p>Scanne pour rejoindre le groupe du week-end</p>
-                    <button class="fey-btn" style="margin-top: 1rem;">✨ Rejoindre</button>
-                </div>
-
-                <div class="fey-qr-card">
-                    <h3>📅 Calendrier pour l'année</h3>
-                    <div style="margin: 1rem 0;">
-                        <iframe src="https://calendar.google.com/calendar/embed?src=eeffb88cee021c342c640fefa25cae1cd072b9a1f5b95eae81bd99134eee3ebb%40group.calendar.google.com&ctz=Europe%2FParis" 
-                                style="border: 0; width: 100%; height: 400px;" 
-                                frameborder="0" 
-                                scrolling="no">
-                        </iframe>
+            <div class="fey-card" style="background: linear-gradient(135deg, #E8F5E8, #C8E6C9); border-left: 6px solid #4CAF50;">
+                <div class="fey-card-header">📅 Dates & Horaires</div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                    <div style="background: white; padding: 1.5rem; border-radius: 12px; border: 2px solid var(--c-ink-900); text-align: center;">
+                        <div style="font-size: 2.5rem; margin-bottom: 1rem;">📅</div>
+                        <h3 style="font-family: 'Patrick Hand', cursive; color: var(--c-orange-600); margin-bottom: 0.5rem;">Week-end Scout</h3>
+                        <p><strong>Du 25 au 27 octobre 2025</strong></p>
+                        <p style="font-size: 0.9rem; color: #666;">3 jours d'aventure !</p>
                     </div>
-                    <p>Calendrier des événements scouts</p>
+                    <div style="background: white; padding: 1.5rem; border-radius: 12px; border: 2px solid var(--c-ink-900); text-align: center;">
+                        <div style="font-size: 2.5rem; margin-bottom: 1rem;">🚗</div>
+                        <h3 style="font-family: 'Patrick Hand', cursive; color: var(--c-orange-600); margin-bottom: 0.5rem;">Départ</h3>
+                        <p><strong>Vendredi 8h30</strong></p>
+                        <p style="font-size: 0.9rem; color: #666;">École Notre-Dame</p>
+                    </div>
+                    <div style="background: white; padding: 1.5rem; border-radius: 12px; border: 2px solid var(--c-ink-900); text-align: center;">
+                        <div style="font-size: 2.5rem; margin-bottom: 1rem;">🏠</div>
+                        <h3 style="font-family: 'Patrick Hand', cursive; color: var(--c-orange-600); margin-bottom: 0.5rem;">Retour</h3>
+                        <p><strong>Dimanche 17h00</strong></p>
+                        <p style="font-size: 0.9rem; color: #666;">Même lieu</p>
+                    </div>
                 </div>
             </div>
 
-            <div class="fey-card" style="margin-top: 2rem;">
-                <div class="fey-card-header">📍 Infos pratiques</div>
-                <div class="fey-note">
-                    <strong>📅 Dates :</strong> Week-end du XX au XX octobre 2025<br><br>
-                    <strong>📍 Lieu :</strong> Jambville (78440)<br><br>
-                    <strong>🚗 Départ :</strong> Rendez-vous à [LIEU] à [HEURE]<br><br>
-                    <strong>🏠 Retour :</strong> [JOUR] à [HEURE]<br><br>
-                    <strong>📞 Urgence :</strong> [NUMÉRO]
+            <div class="fey-card" style="background: linear-gradient(135deg, #FFF3E0, #FFE0B2); border-left: 6px solid #FF9800;">
+                <div class="fey-card-header">📍 Lieu & Contact</div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                    <div style="background: white; padding: 1.5rem; border-radius: 12px; border: 2px solid var(--c-ink-900);">
+                        <h3 style="font-family: 'Patrick Hand', cursive; color: var(--c-orange-600); margin-bottom: 1rem;">🏕️ Lieu du Camp</h3>
+                        <p><strong>Jambville (78440)</strong></p>
+                        <p style="font-size: 0.9rem; color: #666;">Centre de formation scout</p>
+                        <button class="fey-btn" onclick="ouvrirMaps()" style="margin-top: 1rem; width: 100%;">🗺️ Voir sur la carte</button>
+                    </div>
+                    <div style="background: white; padding: 1.5rem; border-radius: 12px; border: 2px solid var(--c-ink-900);">
+                        <h3 style="font-family: 'Patrick Hand', cursive; color: var(--c-orange-600); margin-bottom: 1rem;">📞 Contacts</h3>
+                        <p><strong>Responsable :</strong> Marie Dupont</p>
+                        <p><strong>Téléphone :</strong> 06 12 34 56 78</p>
+                        <p><strong>Urgence :</strong> 06 87 65 43 21</p>
+                        <button class="fey-btn" onclick="ouvrirWhatsApp()" style="margin-top: 1rem; width: 100%; background: #25D366;">💬 WhatsApp</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="fey-qr-grid">
+                <div class="fey-qr-card">
+                    <h3>💬 Groupe WhatsApp Parents</h3>
+                    <div class="fey-qr-code">📱</div>
+                    <p>Rejoignez le groupe pour les dernières infos</p>
+                    <button class="fey-btn" style="margin-top: 1rem; background: #25D366;" onclick="ouvrirWhatsApp()">✨ Rejoindre le groupe</button>
+                </div>
+
+                <div class="fey-qr-card">
+                    <h3>📅 Calendrier Annuel</h3>
+                    <div style="margin: 1rem 0; background: #f5f5f5; padding: 1rem; border-radius: 8px;">
+                        <p style="text-align: center; color: #666;">Calendrier des événements scouts</p>
+                        <div style="font-size: 3rem; text-align: center; margin: 1rem 0;">📅</div>
+                        <button class="fey-btn" onclick="ouvrirCalendrier()" style="width: 100%;">📆 Voir le calendrier</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1244,6 +1340,48 @@
         function recommencerJeu() {
             document.getElementById('jeu-fin').style.display = 'none';
             document.getElementById('jeu-accueil').style.display = 'block';
+        }
+
+        // Ouvrir le jeu de tente
+        function ouvrirJeuTente() {
+            const windowFeatures = 'width=900,height=700,scrollbars=yes,resizable=yes,status=yes,toolbar=no,menubar=no,location=no';
+            const jeuWindow = window.open('jeu_tente.html', 'JeuTente', windowFeatures);
+            
+            if (jeuWindow) {
+                // Centrer la fenêtre
+                jeuWindow.moveTo(
+                    (screen.width - 900) / 2,
+                    (screen.height - 700) / 2
+                );
+                jeuWindow.focus();
+            } else {
+                // Si les popups sont bloqués, ouvrir dans un nouvel onglet
+                window.open('jeu_tente.html', '_blank');
+            }
+        }
+
+        // Ouvrir la vidéo tutoriel
+        function ouvrirVideoTutorial() {
+            // Ouvrir la vidéo YouTube dans un nouvel onglet
+            window.open('https://www.youtube.com/watch?v=1s6PgZ0o-vk', '_blank');
+            
+            // Afficher un message informatif
+            alert('🎬 La vidéo s\'ouvre dans un nouvel onglet !\n\n💡 Conseil : Mets la vidéo en plein écran pour mieux voir les détails du montage de tente.');
+        }
+
+        // Ouvrir Google Maps
+        function ouvrirMaps() {
+            window.open('https://maps.google.com/?q=Jambville+78440', '_blank');
+        }
+
+        // Ouvrir WhatsApp
+        function ouvrirWhatsApp() {
+            window.open('https://wa.me/33612345678', '_blank');
+        }
+
+        // Ouvrir le calendrier
+        function ouvrirCalendrier() {
+            window.open('https://calendar.google.com/calendar/embed?src=eeffb88cee021c342c640fefa25cae1cd072b9a1f5b95eae81bd99134eee3ebb%40group.calendar.google.com&ctz=Europe%2FParis', '_blank');
         }
     </script>
 </body>

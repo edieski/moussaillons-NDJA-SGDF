@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeu de Montage de Tente - Carnet Scout</title>
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --orange: #F77F00;
+            --forest: #2E7D32;
+            --parchment: #FAF3E0;
+            --wood: #E7D9C2;
+            --ink: #1E1E1E;
+            --gold: #FFD166;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: linear-gradient(135deg, var(--forest) 0%, #1B1F3B 100%);
+            min-height: 100vh;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .jeu-container {
+            background: var(--parchment);
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 800px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            border: 3px solid var(--wood);
+        }
+
+        .jeu-title {
+            font-family: 'Patrick Hand', cursive;
+            color: var(--ink);
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .jeu-subtitle {
+            text-align: center;
+            color: var(--forest);
+            font-style: italic;
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+        }
+
+        .etape-container {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .etape-container.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .etape-header {
+            font-family: 'Patrick Hand', cursive;
+            color: var(--orange);
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .etape-description {
+            background: rgba(255, 209, 102, 0.2);
+            border-left: 4px solid var(--orange);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .zone-jeu {
+            background: rgba(255, 255, 255, 0.8);
+            border: 2px dashed var(--forest);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .element-draggable {
+            background: var(--orange);
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            cursor: move;
+            margin: 0.5rem;
+            border: 2px solid var(--ink);
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.1rem;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .element-draggable:hover {
+            background: var(--gold);
+            transform: scale(1.05);
+        }
+
+        .zone-depot {
+            background: rgba(247, 127, 0, 0.1);
+            border: 2px dashed var(--orange);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .zone-depot.drag-over {
+            background: rgba(247, 127, 0, 0.3);
+        }
+
+        .zone-depot.correct {
+            background: rgba(46, 125, 50, 0.3);
+        }
+
+        .zone-depot.incorrect {
+            background: rgba(211, 47, 47, 0.3);
+        }
+
+        .bouton-container {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 1.5rem;
+        }
+
+        .btn {
+            background: var(--orange);
+            color: white;
+            border: 3px solid var(--ink);
+            border-radius: 25px;
+            padding: 0.75rem 1.5rem;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 3px 3px 0 var(--ink);
+        }
+
+        .btn:hover {
+            background: var(--gold);
+            transform: translateY(-2px);
+            box-shadow: 5px 5px 0 var(--ink);
+        }
+
+        .progress-bar {
+            background: var(--wood);
+            height: 20px;
+            border-radius: 25px;
+            border: 2px solid var(--ink);
+            overflow: hidden;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--forest), #356859);
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+
+        .feedback {
+            text-align: center;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .feedback.success {
+            background: rgba(46, 125, 50, 0.2);
+            color: var(--forest);
+            border: 2px solid var(--forest);
+        }
+
+        .feedback.error {
+            background: rgba(211, 47, 47, 0.2);
+            color: #d32f2f;
+            border: 2px solid #d32f2f;
+        }
+
+        .tente-visuelle {
+            width: 200px;
+            height: 150px;
+            background: var(--forest);
+            border-radius: 10px;
+            position: relative;
+            margin: 1rem auto;
+            transition: all 0.5s ease;
+            opacity: 0.3;
+        }
+
+        .tente-visuelle.complete {
+            opacity: 1;
+            box-shadow: 0 0 20px rgba(46, 125, 50, 0.5);
+        }
+
+        .tente-visuelle::before {
+            content: '';
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 100px solid transparent;
+            border-right: 100px solid transparent;
+            border-bottom: 40px solid var(--orange);
+        }
+
+        .chanson-tente {
+            background: linear-gradient(135deg, #ff6b6b, var(--gold));
+            color: white;
+            padding: 1.5rem;
+            border-radius: 16px;
+            border: 3px solid var(--ink);
+            margin: 1rem 0;
+            text-align: center;
+        }
+
+        .chanson-tente h3 {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .chanson-tente .vers {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            font-weight: bold;
+            margin: 0.5rem 0;
+        }
+
+        .elements-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .score-display {
+            text-align: center;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.3rem;
+            color: var(--forest);
+            margin-bottom: 1rem;
+        }
+
+        .etape-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .etape-dot {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--wood);
+            border: 2px solid var(--ink);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .etape-dot.active {
+            background: var(--orange);
+            box-shadow: 0 0 10px rgba(247, 127, 0, 0.5);
+        }
+
+        .etape-dot.completed {
+            background: var(--forest);
+            color: white;
+        }
+
+        .etape-dot.completed::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .jeu-container {
+                padding: 1rem;
+                margin: 0.5rem;
+            }
+
+            .jeu-title {
+                font-size: 2rem;
+            }
+
+            .etape-header {
+                font-size: 1.5rem;
+            }
+
+            .zone-jeu {
+                padding: 1rem;
+                min-height: 250px;
+            }
+
+            .element-draggable {
+                padding: 0.75rem;
+                font-size: 1rem;
+                margin: 0.25rem;
+            }
+
+            .tente-visuelle {
+                width: 150px;
+                height: 120px;
+            }
+
+            .bouton-container {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .btn {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="jeu-container">
+        <h1 class="jeu-title">⛺ Jeu de Montage de Tente ⛺</h1>
+        <p class="jeu-subtitle">Apprends à monter une tente canadienne en jouant !</p>
+        
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill" style="width: 0%;">0% - Commence l'aventure !</div>
+        </div>
+
+        <div class="score-display">
+            Score: <span id="score">0</span> points ⛺
+        </div>
+
+        <div class="etape-indicator">
+            <div class="etape-dot active" id="dot1"></div>
+            <div class="etape-dot" id="dot2"></div>
+            <div class="etape-dot" id="dot3"></div>
+            <div class="etape-dot" id="dot4"></div>
+            <div class="etape-dot" id="dot5"></div>
+            <div class="etape-dot" id="dot6"></div>
+        </div>
+
+        <!-- Étape 1: Choix du terrain -->
+        <div class="etape-container active" id="etape1">
+            <h2 class="etape-header">🌍 Étape 1: Choix du terrain</h2>
+            <div class="etape-description">
+                <strong>🎯 Mission :</strong> Choisis le meilleur terrain pour monter ta tente !<br>
+                <strong>💡 Astuce :</strong> Le terrain doit être plat et dégagé pour une tente stable.
+            </div>
+            <div class="zone-jeu">
+                <div class="elements-container">
+                    <div class="element-draggable" draggable="true" data-correct="true">
+                        🌱 Terrain plat et dégagé
+                    </div>
+                    <div class="element-draggable" draggable="true" data-correct="false">
+                        🪨 Terrain rocheux
+                    </div>
+                    <div class="element-draggable" draggable="true" data-correct="false">
+                        🌊 Près de l'eau
+                    </div>
+                </div>
+                <div class="zone-depot" id="terrain-zone">
+                    <p>Dépose ici le bon terrain !</p>
+                </div>
+            </div>
+            <div class="bouton-container">
+                <button class="btn" onclick="verifierEtape1()">🔍 Vérifier</button>
+            </div>
+        </div>
+
+        <!-- Étape 2: Étaler la toile -->
+        <div class="etape-container" id="etape2">
+            <h2 class="etape-header">📐 Étape 2: Étaler la toile</h2>
+            <div class="etape-description">
+                <strong>🎯 Mission :</strong> Étale complètement la toile au sol !<br>
+                <strong>💡 Astuce :</strong> La toile doit être bien étalée sans plis pour un montage propre.
+            </div>
+            <div class="zone-jeu">
+                <div class="elements-container">
+                    <div class="element-draggable" draggable="true" data-correct="true">
+                        📏 Étaler complètement
+                    </div>
+                    <div class="element-draggable" draggable="true" data-correct="false">
+                        🗂️ Laisser pliée
+                    </div>
+                </div>
+                <div class="zone-depot" id="toile-zone">
+                    <p>Dépose ici la bonne action !</p>
+                </div>
+            </div>
+            <div class="bouton-container">
+                <button class="btn" onclick="verifierEtape2()">🔍 Vérifier</button>
+            </div>
+        </div>
+
+        <!-- Étape 3: Planter les piquets -->
+        <div class="etape-container" id="etape3">
+            <h2 class="etape-header">📌 Étape 3: Planter les piquets</h2>
+            <div class="etape-description">
+                <strong>🎯 Mission :</strong> Plante les piquets dans la bonne position !<br>
+                <strong>💡 Astuce :</strong> Les piquets doivent être plantés à 45° vers l'extérieur pour une meilleure stabilité.
+            </div>
+            <div class="zone-jeu">
+                <div class="elements-container">
+                    <div class="element-draggable" draggable="true" data-correct="true">
+                        📐 45° vers l'extérieur
+                    </div>
+                    <div class="element-draggable" draggable="true" data-correct="false">
+                        📏 À la verticale
+                    </div>
+                </div>
+                <div class="zone-depot" id="piquets-zone">
+                    <p>Dépose ici la bonne technique !</p>
+                </div>
+            </div>
+            <div class="bouton-container">
+                <button class="btn" onclick="verifierEtape3()">🔍 Vérifier</button>
+            </div>
+        </div>
+
+        <!-- Étape 4: Installer le mât -->
+        <div class="etape-container" id="etape4">
+            <h2 class="etape-header">🏗️ Étape 4: Installer le mât</h2>
+            <div class="etape-description">
+                <strong>🎯 Mission :</strong> Place le mât au bon endroit !<br>
+                <strong>💡 Astuce :</strong> Le mât central doit être positionné exactement au centre de la toile.
+            </div>
+            <div class="zone-jeu">
+                <div class="tente-visuelle" id="tente-montage">
+                    <div class="element-draggable" draggable="true" data-correct="true" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                        🏗️ Mât central
+                    </div>
+                </div>
+                <div class="zone-depot" id="mat-zone">
+                    <p>Déplace le mât au centre !</p>
+                </div>
+            </div>
+            <div class="bouton-container">
+                <button class="btn" onclick="verifierEtape4()">🔍 Vérifier</button>
+            </div>
+        </div>
+
+        <!-- Étape 5: Tendre les haubans -->
+        <div class="etape-container" id="etape5">
+            <h2 class="etape-header">🔗 Étape 5: Tendre les haubans</h2>
+            <div class="etape-description">
+                <strong>🎯 Mission :</strong> Tends et ajuste les haubans !<br>
+                <strong>💡 Astuce :</strong> Les haubans doivent être bien tendus pour maintenir la tente stable.
+            </div>
+            <div class="zone-jeu">
+                <div class="elements-container">
+                    <div class="element-draggable" draggable="true" data-correct="true">
+                        🔗 Tendre et ajuster
+                    </div>
+                    <div class="element-draggable" draggable="true" data-correct="false">
+                        🪢 Laisser détendu
+                    </div>
+                </div>
+                <div class="zone-depot" id="haubans-zone">
+                    <p>Dépose ici la bonne action !</p>
+                </div>
+            </div>
+            <div class="bouton-container">
+                <button class="btn" onclick="verifierEtape5()">🔍 Vérifier</button>
+            </div>
+        </div>
+
+        <!-- Étape 6: Protection finale -->
+        <div class="etape-container" id="etape6">
+            <h2 class="etape-header">🌧️ Étape 6: Protection finale</h2>
+            <div class="etape-description">
+                <strong>🎯 Mission :</strong> Ajoute la protection contre la pluie !<br>
+                <strong>💡 Astuce :</strong> Le double-toit protège de la pluie et de la condensation.
+            </div>
+            <div class="zone-jeu">
+                <div class="elements-container">
+                    <div class="element-draggable" draggable="true" data-correct="true">
+                        🌧️ Double-toit
+                    </div>
+                    <div class="element-draggable" draggable="true" data-correct="false">
+                        🏠 Un seul toit
+                    </div>
+                </div>
+                <div class="zone-depot" id="protection-zone">
+                    <p>Dépose ici la bonne protection !</p>
+                </div>
+            </div>
+            <div class="bouton-container">
+                <button class="btn" onclick="verifierEtape6()">🔍 Vérifier</button>
+            </div>
+        </div>
+
+        <!-- Fin du jeu -->
+        <div class="etape-container" id="fin-jeu">
+            <h2 class="etape-header">🎉 Félicitations ! 🎉</h2>
+            <div class="etape-description">
+                <strong>🌟 Bravo ! Tu as réussi à monter ta tente ! 🌟</strong><br>
+                Tu es maintenant prêt pour de vraies aventures scoutes !
+            </div>
+            <div class="tente-visuelle complete"></div>
+            <div class="chanson-tente">
+                <h3>🎵 Chanson de la tente 🎵</h3>
+                <div class="vers">🎶 "Terrain plat, toile au sol" 🎶</div>
+                <div class="vers">🎶 "Piquets en angle, mât au centre" 🎶</div>
+                <div class="vers">🎶 "Haubans tendus, double-toit" 🎶</div>
+                <div class="vers">🎶 "Et voilà, tente debout !" 🎶</div>
+            </div>
+            <div class="bouton-container">
+                <button class="btn" onclick="recommencer()">🔄 Recommencer</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let etapeActuelle = 1;
+        let score = 0;
+        let elementsDeposes = {};
+
+        function initJeu() {
+            setupDragAndDrop();
+            updateProgress();
+            updateScore();
+        }
+
+        function setupDragAndDrop() {
+            const elements = document.querySelectorAll('.element-draggable');
+            const zones = document.querySelectorAll('.zone-depot');
+
+            elements.forEach(element => {
+                element.addEventListener('dragstart', handleDragStart);
+            });
+
+            zones.forEach(zone => {
+                zone.addEventListener('dragover', handleDragOver);
+                zone.addEventListener('drop', handleDrop);
+                zone.addEventListener('dragenter', handleDragEnter);
+                zone.addEventListener('dragleave', handleDragLeave);
+            });
+        }
+
+        function handleDragStart(e) {
+            e.dataTransfer.setData('text/plain', e.target.outerHTML);
+            e.dataTransfer.setData('correct', e.target.dataset.correct);
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+        }
+
+        function handleDragEnter(e) {
+            e.preventDefault();
+            e.target.classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            e.target.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.target.classList.remove('drag-over');
+            
+            const html = e.dataTransfer.getData('text/plain');
+            const isCorrect = e.dataTransfer.getData('correct') === 'true';
+            const zoneId = e.target.id;
+            
+            e.target.innerHTML = '';
+            e.target.insertAdjacentHTML('beforeend', html);
+            elementsDeposes[zoneId] = { html, isCorrect };
+        }
+
+        function verifierEtape1() {
+            const element = elementsDeposes['terrain-zone'];
+            if (element && element.isCorrect) {
+                showFeedback('success', '🎉 Parfait ! Un terrain plat et dégagé est idéal !');
+                score += 10;
+                setTimeout(() => passerEtapeSuivante(), 1500);
+            } else {
+                showFeedback('error', '❌ Pas tout à fait ! Un terrain plat et dégagé est mieux pour la stabilité.');
+            }
+        }
+
+        function verifierEtape2() {
+            const element = elementsDeposes['toile-zone'];
+            if (element && element.isCorrect) {
+                showFeedback('success', '🎉 Excellent ! Une toile bien étalée facilite le montage !');
+                score += 10;
+                setTimeout(() => passerEtapeSuivante(), 1500);
+            } else {
+                showFeedback('error', '❌ Presque ! Il faut étaler complètement la toile pour un montage propre.');
+            }
+        }
+
+        function verifierEtape3() {
+            const element = elementsDeposes['piquets-zone'];
+            if (element && element.isCorrect) {
+                showFeedback('success', '🎉 Bravo ! Les piquets à 45° assurent une meilleure stabilité !');
+                score += 10;
+                setTimeout(() => passerEtapeSuivante(), 1500);
+            } else {
+                showFeedback('error', '❌ Pas tout à fait ! Les piquets doivent être à 45° vers l\'extérieur.');
+            }
+        }
+
+        function verifierEtape4() {
+            const element = elementsDeposes['mat-zone'];
+            if (element && element.isCorrect) {
+                showFeedback('success', '🎉 Parfait ! Le mât central est bien positionné !');
+                score += 10;
+                setTimeout(() => passerEtapeSuivante(), 1500);
+            } else {
+                showFeedback('error', '❌ Presque ! Le mât doit être exactement au centre de la toile.');
+            }
+        }
+
+        function verifierEtape5() {
+            const element = elementsDeposes['haubans-zone'];
+            if (element && element.isCorrect) {
+                showFeedback('success', '🎉 Excellent ! Des haubans bien tendus maintiennent la tente stable !');
+                score += 10;
+                setTimeout(() => passerEtapeSuivante(), 1500);
+            } else {
+                showFeedback('error', '❌ Pas tout à fait ! Les haubans doivent être tendus et ajustés.');
+            }
+        }
+
+        function verifierEtape6() {
+            const element = elementsDeposes['protection-zone'];
+            if (element && element.isCorrect) {
+                showFeedback('success', '🎉 Bravo ! Le double-toit protège parfaitement de la pluie !');
+                score += 10;
+                setTimeout(() => {
+                    document.getElementById('etape6').classList.remove('active');
+                    document.getElementById('fin-jeu').classList.add('active');
+                    updateProgress();
+                }, 1500);
+            } else {
+                showFeedback('error', '❌ Presque ! Le double-toit est essentiel pour la protection.');
+            }
+        }
+
+        function passerEtapeSuivante() {
+            document.getElementById(`etape${etapeActuelle}`).classList.remove('active');
+            etapeActuelle++;
+            document.getElementById(`etape${etapeActuelle}`).classList.add('active');
+            updateProgress();
+            updateScore();
+            updateEtapeIndicator();
+        }
+
+        function showFeedback(type, message) {
+            const oldFeedback = document.querySelector('.feedback');
+            if (oldFeedback) oldFeedback.remove();
+            
+            const feedback = document.createElement('div');
+            feedback.className = `feedback ${type}`;
+            feedback.textContent = message;
+            
+            const etapeActive = document.querySelector('.etape-container.active');
+            etapeActive.appendChild(feedback);
+            
+            setTimeout(() => feedback.remove(), 3000);
+        }
+
+        function updateProgress() {
+            const progress = Math.round((etapeActuelle - 1) / 6 * 100);
+            const progressFill = document.getElementById('progressFill');
+            progressFill.style.width = progress + '%';
+            
+            if (etapeActuelle === 7) {
+                progressFill.textContent = '🎉 Tente montée ! 🎉';
+            } else {
+                progressFill.textContent = `${progress}% - Étape ${etapeActuelle}/6`;
+            }
+        }
+
+        function updateScore() {
+            document.getElementById('score').textContent = score;
+        }
+
+        function updateEtapeIndicator() {
+            for (let i = 1; i <= 6; i++) {
+                const dot = document.getElementById(`dot${i}`);
+                dot.classList.remove('active', 'completed');
+            }
+            
+            for (let i = 1; i < etapeActuelle; i++) {
+                const dot = document.getElementById(`dot${i}`);
+                dot.classList.add('completed');
+            }
+            
+            if (etapeActuelle <= 6) {
+                const dot = document.getElementById(`dot${etapeActuelle}`);
+                dot.classList.add('active');
+            }
+        }
+
+        function recommencer() {
+            etapeActuelle = 1;
+            score = 0;
+            elementsDeposes = {};
+            
+            document.querySelectorAll('.etape-container').forEach(etape => {
+                etape.classList.remove('active');
+            });
+            document.getElementById('etape1').classList.add('active');
+            
+            document.querySelectorAll('.zone-depot').forEach(zone => {
+                zone.innerHTML = '<p>Dépose ici la bonne réponse !</p>';
+            });
+            
+            document.getElementById('tente-montage').classList.remove('complete');
+            
+            updateEtapeIndicator();
+            updateProgress();
+            updateScore();
+        }
+
+        window.addEventListener('load', initJeu);
+    </script>
+</body>
+</html>
