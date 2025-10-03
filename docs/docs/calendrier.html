@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📅 Calendrier - Carnet Scout</title>
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <div class="fey-container">
+        <nav class="fey-nav">
+            <button class="fey-tab" onclick="navigateTo('index')">🏠 Accueil</button>
+            <button class="fey-tab" onclick="navigateTo('liste')">📋 Ma Liste</button>
+            <button class="fey-tab active">📅 Calendrier</button>
+            <button class="fey-tab" onclick="navigateTo('admin')">👑 Admin</button>
+            <button class="fey-tab" onclick="navigateTo('registre')">📊 Registre</button>
+            <button class="fey-tab" onclick="navigateTo('covoiturage')">🚗 Covoiturage</button>
+        </nav>
+
+        <h1 class="fey-title">📅 Calendrier des Sorties</h1>
+        <p class="fey-subtitle">Découvre les prochaines aventures scoutes !</p>
+
+        <!-- Filtres -->
+        <div class="fey-card">
+            <div class="fey-card-header">🔍 Filtres</div>
+            <div class="filter-container">
+                <button class="fey-btn filter-btn active" data-filter="all">Toutes</button>
+                <button class="fey-btn filter-btn" data-filter="sortie">Sorties</button>
+                <button class="fey-btn filter-btn" data-filter="reunion">Réunions</button>
+                <button class="fey-btn filter-btn" data-filter="camp">Camps</button>
+            </div>
+        </div>
+
+        <!-- Calendrier -->
+        <div class="fey-card">
+            <div class="fey-card-header">📅 Événements à venir</div>
+            <div class="calendar-container" id="calendarContainer">
+                <!-- Les événements seront chargés ici -->
+            </div>
+        </div>
+
+        <!-- Statistiques -->
+        <div class="fey-card">
+            <div class="fey-card-header">📊 Statistiques</div>
+            <div class="stats-container">
+                <div class="stat-item">
+                    <div class="stat-number" id="totalEvents">0</div>
+                    <div class="stat-label">Événements</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="nextEvent">-</div>
+                    <div class="stat-label">Prochain</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="thisMonth">0</div>
+                    <div class="stat-label">Ce mois</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/common.js"></script>
+    <script>
+        // Navigation
+        function navigateTo(page) {
+            if (page === 'index') {
+                window.location.href = 'index.html';
+            } else {
+                window.location.href = page + '.html';
+            }
+        }
+
+        // Données des événements
+        const calendarEvents = [
+            {
+                id: 1,
+                title: "Sortie en forêt",
+                date: "2024-12-15",
+                type: "sortie",
+                description: "Randonnée et observation de la nature",
+                location: "Forêt de Compiègne"
+            },
+            {
+                id: 2,
+                title: "Réunion d'équipe",
+                date: "2024-12-20",
+                type: "reunion",
+                description: "Préparation du camp d'hiver",
+                location: "Local scout"
+            },
+            {
+                id: 3,
+                title: "Camp d'hiver",
+                date: "2024-12-28",
+                type: "camp",
+                description: "Camp de 3 jours en montagne",
+                location: "Alpes"
+            },
+            {
+                id: 4,
+                title: "Sortie vélo",
+                date: "2025-01-05",
+                type: "sortie",
+                description: "Parcours vélo en campagne",
+                location: "Campagne"
+            },
+            {
+                id: 5,
+                title: "Réunion parents",
+                date: "2025-01-10",
+                type: "reunion",
+                description: "Information sur les activités",
+                location: "Local scout"
+            }
+        ];
+
+        let currentFilter = 'all';
+
+        // Charger les événements depuis localStorage ou utiliser les données par défaut
+        function loadCalendarEvents() {
+            const saved = localStorage.getItem('calendar-events');
+            if (saved) {
+                return JSON.parse(saved);
+            }
+            return calendarEvents;
+        }
+
+        // Sauvegarder les événements
+        function saveCalendarEvents(events) {
+            localStorage.setItem('calendar-events', JSON.stringify(events));
+        }
+
+        // Formater la date
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('fr-FR', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        }
+
+        // Obtenir l'icône selon le type
+        function getEventIcon(type) {
+            const icons = {
+                'sortie': '🥾',
+                'reunion': '👥',
+                'camp': '🏕️'
+            };
+            return icons[type] || '📅';
+        }
+
+        // Obtenir la couleur selon le type
+        function getEventColor(type) {
+            const colors = {
+                'sortie': '#4CAF50',
+                'reunion': '#2196F3',
+                'camp': '#FF9800'
+            };
+            return colors[type] || '#9E9E9E';
+        }
+
+        // Filtrer les événements
+        function filterEvents(filter) {
+            currentFilter = filter;
+            const events = loadCalendarEvents();
+            const filtered = filter === 'all' ? events : events.filter(event => event.type === filter);
+            displayEvents(filtered);
+            updateFilterButtons();
+        }
+
+        // Afficher les événements
+        function displayEvents(events) {
+            const container = document.getElementById('calendarContainer');
+            
+            if (events.length === 0) {
+                container.innerHTML = '<div class="fey-note">Aucun événement trouvé.</div>';
+                return;
+            }
+
+            // Trier par date
+            events.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            const html = events.map(event => {
+                const isPast = new Date(event.date) < new Date();
+                const isToday = new Date(event.date).toDateString() === new Date().toDateString();
+                
+                return `
+                    <div class="event-card ${isPast ? 'past' : ''} ${isToday ? 'today' : ''}" style="border-left: 4px solid ${getEventColor(event.type)}">
+                        <div class="event-header">
+                            <div class="event-icon">${getEventIcon(event.type)}</div>
+                            <div class="event-info">
+                                <div class="event-title">${event.title}</div>
+                                <div class="event-date">${formatDate(event.date)}</div>
+                            </div>
+                        </div>
+                        <div class="event-details">
+                            <div class="event-description">${event.description}</div>
+                            <div class="event-location">📍 ${event.location}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = html;
+        }
+
+        // Mettre à jour les boutons de filtre
+        function updateFilterButtons() {
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.filter === currentFilter) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+
+        // Mettre à jour les statistiques
+        function updateStats() {
+            const events = loadCalendarEvents();
+            const now = new Date();
+            const thisMonth = events.filter(event => {
+                const eventDate = new Date(event.date);
+                return eventDate.getMonth() === now.getMonth() && eventDate.getFullYear() === now.getFullYear();
+            });
+
+            const upcomingEvents = events.filter(event => new Date(event.date) >= now);
+            const nextEvent = upcomingEvents.length > 0 ? upcomingEvents[0].title : 'Aucun';
+
+            document.getElementById('totalEvents').textContent = events.length;
+            document.getElementById('nextEvent').textContent = nextEvent;
+            document.getElementById('thisMonth').textContent = thisMonth.length;
+        }
+
+        // Initialisation
+        function init() {
+            // Charger les événements depuis localStorage
+            const events = loadCalendarEvents();
+            saveCalendarEvents(events); // Sauvegarder les données par défaut si nécessaire
+            
+            // Afficher tous les événements
+            displayEvents(events);
+            updateStats();
+
+            // Événements des filtres
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    filterEvents(btn.dataset.filter);
+                });
+            });
+        }
+
+        // Démarrer
+        window.addEventListener('load', init);
+    </script>
+
+    <style>
+        .filter-container {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            border: 2px solid var(--c-ink-900);
+            background: white;
+            color: var(--c-ink-900);
+            border-radius: var(--r-sm);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-btn:hover {
+            background: var(--c-ink-900);
+            color: white;
+        }
+
+        .filter-btn.active {
+            background: var(--c-ink-900);
+            color: white;
+        }
+
+        .calendar-container {
+            display: grid;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .event-card {
+            background: white;
+            border-radius: var(--r-sm);
+            padding: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .event-card.past {
+            opacity: 0.6;
+        }
+
+        .event-card.today {
+            border: 2px solid #FF6B6B;
+            background: #FFF5F5;
+        }
+
+        .event-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .event-icon {
+            font-size: 2rem;
+        }
+
+        .event-info {
+            flex: 1;
+        }
+
+        .event-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--c-ink-900);
+        }
+
+        .event-date {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .event-details {
+            margin-top: 0.5rem;
+        }
+
+        .event-description {
+            color: var(--c-ink-900);
+            margin-bottom: 0.25rem;
+        }
+
+        .event-location {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: var(--r-sm);
+            border: 2px solid var(--c-ink-900);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--c-ink-900);
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 0.25rem;
+        }
+    </style>
+</body>
+</html>

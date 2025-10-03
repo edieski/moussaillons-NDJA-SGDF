@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tente Bird - Quiz des Étapes !</title>
+    <style>
+        body {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #87CEEB 0%, #98FB98 100%);
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .game-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: linear-gradient(to bottom, #87CEEB 0%, #98FB98 70%, #90EE90 100%);
+        }
+
+        .bird {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: #FFD700;
+            border-radius: 50%;
+            border: 3px solid #FFA500;
+            transition: transform 0.1s ease;
+            z-index: 10;
+        }
+
+        .bird::before {
+            content: '🏕️';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+        }
+
+        .pipe {
+            position: absolute;
+            background: #8B4513;
+            border: 2px solid #654321;
+            border-radius: 10px;
+        }
+
+        .choice-button {
+            position: absolute;
+            background: #3498DB;
+            color: white;
+            border: 3px solid #2980B9;
+            border-radius: 15px;
+            padding: 10px 15px;
+            font-weight: bold;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            z-index: 15;
+            text-align: center;
+            min-width: 120px;
+            animation: bounce 2s infinite;
+        }
+
+        .choice-button:hover {
+            background: #2980B9;
+            transform: scale(1.05);
+        }
+
+        .choice-button.correct {
+            background: #27AE60;
+            border-color: #229954;
+        }
+
+        .choice-button.wrong {
+            background: #E74C3C;
+            border-color: #C0392B;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+
+        .ui {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 20;
+            color: #2C3E50;
+        }
+
+        .score {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .question-panel {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 15px;
+            border: 3px solid #E74C3C;
+            max-width: 280px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .question-title {
+            font-weight: bold;
+            color: #E74C3C;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .question-text {
+            color: #2C3E50;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .timer {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #27AE60;
+        }
+
+        .difficulty {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #8E44AD;
+        }
+
+        .time-limit {
+            font-size: 12px;
+            color: #E67E22;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            color: #2C3E50;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 15px;
+            border: 3px solid #3498DB;
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(231, 76, 60, 0.95);
+            color: white;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            border: 4px solid #C0392B;
+            z-index: 30;
+            display: none;
+        }
+
+        .success {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(46, 204, 113, 0.95);
+            color: white;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            border: 4px solid #27AE60;
+            z-index: 30;
+            display: none;
+        }
+
+        .restart-btn {
+            background: #3498DB;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: background 0.3s;
+        }
+
+        .restart-btn:hover {
+            background: #2980B9;
+        }
+
+        .clouds {
+            position: absolute;
+            width: 100px;
+            height: 40px;
+            background: white;
+            border-radius: 40px;
+            opacity: 0.7;
+            animation: float 20s infinite linear;
+        }
+
+        @keyframes float {
+            from { transform: translateX(-100px); }
+            to { transform: translateX(calc(100vw + 100px)); }
+        }
+
+        .paused {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(52, 73, 94, 0.95);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            z-index: 25;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <canvas class="game-canvas" id="gameCanvas"></canvas>
+        
+        <div class="bird" id="bird"></div>
+        
+        <div class="ui">
+            <div class="score">Étape: <span id="score">1</span>/6</div>
+            <div class="timer">⏱️ Temps: <span id="gameTimer">0</span>s | Étape: <span id="stepTimer">0</span>s</div>
+            <div class="difficulty">🎯 Niveau: <span id="difficulty">Débutant</span></div>
+            <div class="question-panel">
+                <div class="question-title">🤔 Quelle est la prochaine étape ?</div>
+                <div class="question-text" id="questionText">🏕️ Tu arrives au camp. Que fais-tu en PREMIER ?</div>
+                <div class="time-limit">⏰ Temps recommandé: <span id="timeLimit">5</span> minutes</div>
+                <div style="font-size: 12px; color: #7F8C8D;">Clique sur la bonne réponse pour continuer !</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div><strong>🎮 CONTRÔLES</strong></div>
+            <div>Clique ou appuie sur ESPACE pour voler !</div>
+            <div>Choisis la bonne étape pour passer ! 🏕️</div>
+        </div>
+
+        <div class="paused" id="paused">
+            <h3>🎯 Choisis ta réponse !</h3>
+            <p>Le jeu reprendra quand tu auras choisi la bonne étape.</p>
+        </div>
+
+        <div class="game-over" id="gameOver">
+            <h2>🚫 Oups !</h2>
+            <p>Mauvaise réponse ! Révise les étapes de montage de tente et réessaie.</p>
+            <button class="restart-btn" onclick="restartGame()">Recommencer</button>
+        </div>
+
+        <div class="success" id="success">
+            <h2>🎉 Bravo Louveteau !</h2>
+            <p>Tu connais parfaitement les étapes pour monter une tente !</p>
+            <p>Tu es prêt pour le camp ! 🏕️</p>
+            <button class="restart-btn" onclick="restartGame()">Rejouer</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const bird = document.getElementById('bird');
+        const scoreElement = document.getElementById('score');
+        const questionText = document.getElementById('questionText');
+        const gameOverDiv = document.getElementById('gameOver');
+        const successDiv = document.getElementById('success');
+        const pausedDiv = document.getElementById('paused');
+
+        // Configuration du canvas
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // Questions et étapes (6 étapes détaillées)
+        const tentQuestions = [
+            {
+                question: "🏕️ Tu arrives au camp. Que fais-tu en PREMIER ?",
+                correct: "Choisir un sol plat, sec, sans pierres",
+                wrong: ["Déballer tout le matériel", "Étaler la toile directement", "Monter les mâts"],
+                time: 5
+            },
+            {
+                question: "🎒 Le terrain est parfait ! Maintenant ?",
+                correct: "Étaler la toile et fixer les 4 coins",
+                wrong: ["Monter les mâts en premier", "Installer le double-toit", "Planter toutes les sardines"],
+                time: 7
+            },
+            {
+                question: "📐 La toile est fixée. Quelle est l'étape suivante ?",
+                correct: "Glisser les mâts et monter la faitière",
+                wrong: ["Poser le double-toit", "Tendre toutes les cordes", "Installer le tapis de sol"],
+                time: 5
+            },
+            {
+                question: "⛺ Les mâts sont dressés ! Comment continuer ?",
+                correct: "Tendre le toit avec les cordes",
+                wrong: ["Poser le double-toit maintenant", "Vérifier l'intérieur", "Ranger les outils"],
+                time: 5
+            },
+            {
+                question: "🌧️ Le toit est tendu. Pour protéger de la pluie ?",
+                correct: "Poser le double-toit par-dessus",
+                wrong: ["Creuser une rigole", "Ajouter plus de sardines", "Tester la solidité"],
+                time: 5
+            },
+            {
+                question: "✅ Presque fini ! Dernière étape ?",
+                correct: "Installer le tapis et vérifier tout",
+                wrong: ["Démonter pour s'entraîner", "Ajouter des décorations", "Faire le ménage autour"],
+                time: 3
+            }
+        ];
+
+        // Variables du jeu
+        let birdY = canvas.height / 2;
+        let birdVelocity = 0;
+        let gravity = 0.4;
+        let jumpStrength = -7;
+        let gameRunning = true;
+        let gamePaused = false;
+        let currentStep = 0;
+        let pipes = [];
+        let gameSpeed = 1.5;
+        let pipeWidth = 80;
+        let gapHeight = 250;
+        let choiceButtons = [];
+        let gameTimer = 0;
+        let stepTimer = 0;
+        let difficultyLevel = 1;
+
+        // Position initiale de l'oiseau
+        bird.style.left = '100px';
+        updateBirdPosition();
+
+        // Créer les nuages
+        function createClouds() {
+            for (let i = 0; i < 3; i++) {
+                const cloud = document.createElement('div');
+                cloud.className = 'clouds';
+                cloud.style.top = Math.random() * 200 + 50 + 'px';
+                cloud.style.animationDelay = Math.random() * 20 + 's';
+                document.querySelector('.game-container').appendChild(cloud);
+            }
+        }
+
+        // Mélanger un tableau
+        function shuffle(array) {
+            const shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+
+        // Créer les boutons de choix
+        function createChoiceButtons(pipeX, gapY, questionIndex) {
+            const question = tentQuestions[questionIndex];
+            const allChoices = [question.correct, ...question.wrong];
+            const shuffledChoices = shuffle(allChoices);
+
+            shuffledChoices.forEach((choice, index) => {
+                const button = document.createElement('div');
+                button.className = 'choice-button';
+                button.textContent = choice;
+                button.style.left = (pipeX - 60) + 'px';
+                button.style.top = (gapY + 30 + index * 50) + 'px';
+                button.style.animationDelay = (index * 0.2) + 's';
+                
+                button.onclick = () => handleChoice(choice, question.correct, button);
+                
+                document.querySelector('.game-container').appendChild(button);
+                choiceButtons.push(button);
+            });
+        }
+
+        // Gérer le choix de l'utilisateur
+        function handleChoice(selectedChoice, correctChoice, buttonElement) {
+            if (!gamePaused) return;
+
+            // Désactiver tous les boutons
+            choiceButtons.forEach(btn => {
+                btn.style.pointerEvents = 'none';
+                if (btn.textContent === correctChoice) {
+                    btn.classList.add('correct');
+                } else if (btn !== buttonElement) {
+                    btn.style.opacity = '0.5';
+                }
+            });
+
+            if (selectedChoice === correctChoice) {
+                buttonElement.classList.add('correct');
+                setTimeout(() => {
+                    // Bonne réponse - continuer
+                    gamePaused = false;
+                    pausedDiv.style.display = 'none';
+                    clearChoiceButtons();
+                    
+                    // Marquer le tuyau comme passé
+                    const currentPipe = pipes.find(p => p.step === currentStep);
+                    if (currentPipe) {
+                        currentPipe.passed = true;
+                        currentStep++;
+                        stepTimer = 0; // Reset timer pour la prochaine étape
+                        
+                        // Augmenter la difficulté progressivement
+                        if (currentStep > 2) {
+                            gameSpeed += 0.3;
+                            gravity += 0.05;
+                            gapHeight -= 10;
+                            difficultyLevel++;
+                            
+                            const levels = ["Débutant", "Intermédiaire", "Avancé", "Expert", "Maître Scout"];
+                            document.getElementById('difficulty').textContent = levels[Math.min(difficultyLevel-1, 4)];
+                        }
+                        
+                        scoreElement.textContent = currentStep + 1;
+                        
+                        if (currentStep >= tentQuestions.length) {
+                            gameRunning = false;
+                            successDiv.style.display = 'block';
+                        } else {
+                            questionText.textContent = tentQuestions[currentStep].question;
+                            document.getElementById('timeLimit').textContent = tentQuestions[currentStep].time;
+                        }
+                    }
+                }, 1500);
+            } else {
+                buttonElement.classList.add('wrong');
+                setTimeout(() => {
+                    // Mauvaise réponse - game over
+                    gameRunning = false;
+                    gamePaused = false;
+                    gameOverDiv.style.display = 'block';
+                    clearChoiceButtons();
+                }, 1500);
+            }
+        }
+
+        // Supprimer les boutons de choix
+        function clearChoiceButtons() {
+            choiceButtons.forEach(button => {
+                button.remove();
+            });
+            choiceButtons = [];
+        }
+
+        // Initialiser les tuyaux
+        function initPipes() {
+            pipes = [];
+            for (let i = 0; i < tentQuestions.length; i++) {
+                const pipeX = 400 + i * 350;
+                const gapY = 150 + Math.random() * (canvas.height - 400);
+                
+                pipes.push({
+                    x: pipeX,
+                    gapY: gapY,
+                    passed: false,
+                    step: i,
+                    choicesCreated: false
+                });
+            }
+        }
+
+        // Mettre à jour la position de l'oiseau
+        function updateBirdPosition() {
+            bird.style.top = birdY + 'px';
+            
+            const rotation = Math.max(-30, Math.min(30, birdVelocity * 3));
+            bird.style.transform = `rotate(${rotation}deg)`;
+        }
+
+        // Faire sauter l'oiseau
+        function jump() {
+            if (gameRunning && !gamePaused) {
+                birdVelocity = jumpStrength;
+            }
+        }
+
+        // Vérifier les collisions (plus tolérantes)
+        function checkCollisions() {
+            const birdRect = {
+                x: 110, // Plus de marge
+                y: birdY + 10, // Plus de marge en haut
+                width: 40, // Zone de collision plus petite
+                height: 40 // Zone de collision plus petite
+            };
+
+            // Marge plus généreuse pour les bords
+            if (birdY < -20 || birdY > canvas.height - 40) {
+                return true;
+            }
+
+            for (let pipe of pipes) {
+                if (birdRect.x < pipe.x + pipeWidth && birdRect.x + birdRect.width > pipe.x) {
+                    // Marge de 15px pour les tuyaux
+                    if (birdRect.y < pipe.gapY + 15 || birdRect.y + birdRect.height > pipe.gapY + gapHeight - 15) {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        // Dessiner le jeu
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            pipes.forEach((pipe, index) => {
+                // Tuyau du haut
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(pipe.x, 0, pipeWidth, pipe.gapY);
+                
+                // Tuyau du bas
+                ctx.fillRect(pipe.x, pipe.gapY + gapHeight, pipeWidth, canvas.height - pipe.gapY - gapHeight);
+
+                // Bordures
+                ctx.strokeStyle = '#654321';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(pipe.x, 0, pipeWidth, pipe.gapY);
+                ctx.strokeRect(pipe.x, pipe.gapY + gapHeight, pipeWidth, canvas.height - pipe.gapY - gapHeight);
+
+                // Numéro de l'étape
+                const labelY = pipe.gapY + gapHeight / 2;
+                ctx.fillStyle = '#E74C3C';
+                ctx.fillRect(pipe.x - 10, labelY - 20, pipeWidth + 20, 40);
+                
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 16px Comic Sans MS';
+                ctx.textAlign = 'center';
+                ctx.fillText(`Étape ${index + 1}`, pipe.x + pipeWidth / 2, labelY + 5);
+            });
+        }
+
+        // Mettre à jour le jeu
+        function update() {
+            if (!gameRunning) return;
+
+            // Mettre à jour les chronomètres
+            gameTimer += 1/60; // 60 FPS
+            stepTimer += 1/60;
+            
+            document.getElementById('gameTimer').textContent = Math.floor(gameTimer);
+            document.getElementById('stepTimer').textContent = Math.floor(stepTimer);
+
+            if (!gamePaused) {
+                // Physique de l'oiseau
+                birdVelocity += gravity;
+                birdY += birdVelocity;
+
+                // Déplacer les tuyaux
+                pipes.forEach(pipe => {
+                    pipe.x -= gameSpeed;
+
+                    // Créer les choix quand l'oiseau approche
+                    if (!pipe.choicesCreated && pipe.x < 300 && pipe.step === currentStep) {
+                        pipe.choicesCreated = true;
+                        gamePaused = true;
+                        pausedDiv.style.display = 'block';
+                        createChoiceButtons(pipe.x, pipe.gapY, pipe.step);
+                    }
+                });
+
+                // Vérifier les collisions
+                if (checkCollisions()) {
+                    gameRunning = false;
+                    gameOverDiv.style.display = 'block';
+                }
+            }
+
+            updateBirdPosition();
+        }
+
+        // Boucle de jeu
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Redémarrer le jeu
+        function restartGame() {
+            gameRunning = true;
+            gamePaused = false;
+            birdY = canvas.height / 2;
+            birdVelocity = 0;
+            currentStep = 0;
+            gameTimer = 0;
+            stepTimer = 0;
+            difficultyLevel = 1;
+            gameSpeed = 1.5;
+            gravity = 0.4;
+            gapHeight = 250;
+            
+            scoreElement.textContent = '1';
+            questionText.textContent = tentQuestions[0].question;
+            document.getElementById('timeLimit').textContent = tentQuestions[0].time;
+            document.getElementById('difficulty').textContent = 'Débutant';
+            document.getElementById('gameTimer').textContent = '0';
+            document.getElementById('stepTimer').textContent = '0';
+            
+            gameOverDiv.style.display = 'none';
+            successDiv.style.display = 'none';
+            pausedDiv.style.display = 'none';
+            clearChoiceButtons();
+            initPipes();
+        }
+
+        // Contrôles
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                jump();
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('choice-button') && !e.target.classList.contains('restart-btn')) {
+                jump();
+            }
+        });
+
+        // Redimensionnement
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        // Initialisation
+        createClouds();
+        initPipes();
+        gameLoop();
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'988912624502025f',t:'MTc1OTQ1OTE5NS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
