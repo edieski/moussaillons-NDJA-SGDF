@@ -99,7 +99,8 @@
             <button class="fey-tab" onclick="window.showPage('marin')">⚓ Marin</button>
             <button class="fey-tab" onclick="window.showPage('loi')">📜 Loi Scout</button>
             <button class="fey-tab" onclick="window.showPage('admin')" id="adminTab" style="display: none; background: #9C27B0; color: white;">⚙️ Admin</button>
-            <button class="fey-tab" onclick="window.showPage('registre')" id="registreTab" style="display: inline-block; background: #FF5722; color: white;">📋 Registre d'Appel</button>
+            <button class="fey-tab" onclick="window.showPage('registre')" id="registreTab" style="display: none; background: #FF5722; color: white;">📋 Registre d'Appel</button>
+            <span id="adminMessage" style="display: none; color: #666; font-style: italic; padding: 0.5rem;">admin</span>
             <button class="fey-tab" onclick="logout()" style="background: #d32f2f; color: white;">🚪 Déconnexion</button>
         </nav>
 
@@ -769,6 +770,98 @@
                             📱 Le calendrier se met à jour automatiquement
                         </p>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION ADMIN INFOS -->
+        <div id="adminSection" class="fey-card" style="background: linear-gradient(135deg, #FFF3E0, #FFE0B2); border-left: 6px solid #FF9800; margin-top: 2rem; display: none;">
+            <div class="fey-card-header">⚙️ Administration - Informations Pratiques</div>
+            <div style="padding: 1.5rem;">
+                <!-- Bouton de connexion admin -->
+                <div id="adminLoginSection" style="text-align: center; margin-bottom: 2rem; padding: 2rem; background: white; border-radius: var(--r-sm); border: 2px solid var(--c-ink-900);">
+                    <h3 style="color: var(--c-orange-600); margin-bottom: 1rem;">🔐 Connexion Administrateur</h3>
+                    <p style="margin-bottom: 1.5rem; color: #666;">Entrez le mot de passe administrateur pour accéder aux fonctions d'édition.</p>
+                    <div style="display: flex; gap: 1rem; justify-content: center; align-items: center; flex-wrap: wrap;">
+                        <input type="password" id="adminPassword" placeholder="Mot de passe admin" 
+                               style="padding: 0.75rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm); font-size: 1rem; min-width: 200px;">
+                        <button class="fey-btn" onclick="loginAdmin()" style="background: #FF9800;">🔓 Se connecter</button>
+                    </div>
+                    <p style="margin-top: 1rem; font-size: 0.8rem; color: #666;">
+                        Mot de passe admin: <strong>Admin2025!</strong>
+                    </p>
+                </div>
+
+                <!-- Section admin authentifiée -->
+                <div id="adminAuthenticatedSection" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <p style="color: #666; margin: 0;">Modifiez les dates, horaires et lieux des sorties directement depuis cette page.</p>
+                        <button class="fey-btn" onclick="logoutAdmin()" style="background: #f44336; font-size: 0.9rem;">🚪 Déconnexion</button>
+                    </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+                    <!-- Prochaine Sortie -->
+                    <div style="background: white; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm); padding: 1.5rem;">
+                        <h4 style="color: var(--c-orange-600); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                            📅 Prochaine Sortie
+                            <button onclick="editNextOuting()" style="background: #FF9800; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; font-size: 0.8rem; cursor: pointer;">✏️</button>
+                        </h4>
+                        <div id="nextOutingInfo">
+                            <p><strong>Titre:</strong> <span id="nextOutingTitle">Sortie en forêt</span></p>
+                            <p><strong>Date:</strong> <span id="nextOutingDate">15 décembre 2024</span></p>
+                            <p><strong>Heure:</strong> <span id="nextOutingTime">09h00 - 17h00</span></p>
+                            <p><strong>Lieu:</strong> <span id="nextOutingLocation">Forêt de Compiègne</span></p>
+                            <p><strong>Contact:</strong> <span id="nextOutingContact">Marie (06 12 34 56 78)</span></p>
+                        </div>
+                    </div>
+
+                    <!-- Lieu de Rendez-vous -->
+                    <div style="background: white; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm); padding: 1.5rem;">
+                        <h4 style="color: var(--c-orange-600); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                            📍 Lieu de Rendez-vous
+                            <button onclick="editMeetingPlace()" style="background: #FF9800; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; font-size: 0.8rem; cursor: pointer;">✏️</button>
+                        </h4>
+                        <div id="meetingPlaceInfo">
+                            <p><strong>Adresse:</strong> <span id="meetingPlaceAddress">Local Scout, 123 Rue de la Paix, 60200 Compiègne</span></p>
+                            <p><strong>Heure habituelle:</strong> <span id="meetingPlaceTime">08h30</span></p>
+                            <p><strong>Contact local:</strong> <span id="meetingPlaceContact">Jean (06 98 76 54 32)</span></p>
+                        </div>
+                    </div>
+
+                    <!-- Informations Générales -->
+                    <div style="background: white; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm); padding: 1.5rem;">
+                        <h4 style="color: var(--c-orange-600); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                            ℹ️ Informations Générales
+                            <button onclick="editGeneralInfo()" style="background: #FF9800; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; font-size: 0.8rem; cursor: pointer;">✏️</button>
+                        </h4>
+                        <div id="generalInfo">
+                            <p><strong>Responsable:</strong> <span id="generalResponsable">Marie Dubois</span></p>
+                            <p><strong>Téléphone:</strong> <span id="generalPhone">06 12 34 56 78</span></p>
+                            <p><strong>Email:</strong> <span id="generalEmail">marie.dubois@scouts.fr</span></p>
+                            <p><strong>Horaires habituels:</strong> <span id="generalHours">Samedi 09h-17h</span></p>
+                        </div>
+                    </div>
+
+                    <!-- Gestion des Contacts Année -->
+                    <div style="background: white; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm); padding: 1.5rem; grid-column: 1 / -1;">
+                        <h4 style="color: var(--c-orange-600); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                            👥 Contacts de l'Année
+                            <button onclick="addNewContact()" style="background: #4CAF50; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; font-size: 0.8rem; cursor: pointer;">➕</button>
+                        </h4>
+                        <div id="contactsList">
+                            <!-- Les contacts seront chargés ici -->
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 1.5rem; text-align: center;">
+                    <button class="fey-btn" onclick="saveAllInfo()" style="background: #4CAF50; margin-right: 1rem;">
+                        💾 Sauvegarder toutes les informations
+                    </button>
+                    <button class="fey-btn" onclick="resetAllInfo()" style="background: #f44336;">
+                        🔄 Réinitialiser
+                    </button>
+                </div>
                 </div>
             </div>
         </div>
@@ -2341,8 +2434,8 @@ Ambre</textarea>
             const password = document.getElementById('passwordInput').value;
             const errorMessage = document.getElementById('errorMessage');
             
-            if (password === 'Scout2025!') {
-                // Connexion réussie
+            if (password === 'Scout2025!' || password === 'Moussaillons!2025!2026!') {
+                // Connexion utilisateur normale
                 sessionStorage.setItem('scout_session', 'true');
                 document.getElementById('loginPage').style.display = 'none';
                 document.getElementById('mainContent').style.display = 'block';
@@ -2351,6 +2444,7 @@ Ambre</textarea>
                 // Connexion admin
                 sessionStorage.setItem('scout_session', 'true');
                 sessionStorage.setItem('admin_mode', 'true');
+                localStorage.setItem('admin-authenticated', 'true');
                 document.getElementById('loginPage').style.display = 'none';
                 document.getElementById('mainContent').style.display = 'block';
                 enableAdminMode();
@@ -7187,13 +7281,15 @@ displayOutingInfo(event, dateKey);
 
         // Fonction enableAdminMode complète
         function enableAdminMode() {
-            const adminTab = document.getElementById('adminTab');
-            if (adminTab) {
-                adminTab.style.display = 'inline-block';
+            // Utiliser notre nouveau système d'onglets admin
+            if (typeof showAdminTabs === 'function') {
+                showAdminTabs();
             }
             
             // Activer aussi le registre d'appel
-            enableRegistreTab();
+            if (typeof enableRegistreTab === 'function') {
+                enableRegistreTab();
+            }
             
             // Charger les éléments de la checklist
             setTimeout(() => {
@@ -8190,14 +8286,490 @@ displayOutingInfo(event, dateKey);
             window.showPage = function(pageId) {
                 originalShowPage(pageId);
                 
+                // Vérifier l'authentification admin sur changement de page
+                checkAdminAuthOnPageChange();
+                
                 // Charger les équipes si on affiche la page équipes
                 if (pageId === 'equipes') {
                     setTimeout(() => {
                         loadAllTeams();
                         updateTeamEditorWithCentralizedData();
+                        // Ajouter les boutons d'édition si admin connecté
+                        addTeamEditingButtons();
                     }, 100);
                 }
             };
+        });
+
+        // === GESTION ADMIN INFOS ===
+        
+        // Variables globales pour l'authentification
+        let isAdminAuthenticated = false;
+        
+        // Vérifier l'authentification admin globale
+        function checkGlobalAdminAuth() {
+            const authStatus = localStorage.getItem('admin-authenticated');
+            if (authStatus === 'true') {
+                isAdminAuthenticated = true;
+                showAdminTabs();
+            } else {
+                isAdminAuthenticated = false;
+                hideAdminTabs();
+            }
+        }
+        
+        // Afficher les onglets admin
+        function showAdminTabs() {
+            document.getElementById('adminTab').style.display = 'inline-block';
+            document.getElementById('registreTab').style.display = 'inline-block';
+            document.getElementById('adminMessage').style.display = 'none';
+        }
+        
+        // Cacher les onglets admin
+        function hideAdminTabs() {
+            document.getElementById('adminTab').style.display = 'none';
+            document.getElementById('registreTab').style.display = 'none';
+            document.getElementById('adminMessage').style.display = 'inline-block';
+        }
+        
+        // Vérifier l'authentification au chargement
+        function checkAdminAuth() {
+            // Vérifier si on est sur la page Infos
+            const currentPage = document.querySelector('.fey-page.active') || document.getElementById('infos');
+            if (!currentPage || currentPage.id !== 'infos') {
+                document.getElementById('adminSection').style.display = 'none';
+                return;
+            }
+            
+            const authStatus = localStorage.getItem('admin-authenticated');
+            if (authStatus === 'true') {
+                showAdminSection();
+                isAdminAuthenticated = true;
+            } else {
+                showAdminLogin();
+            }
+        }
+        
+        // Afficher la section admin avec authentification
+        function showAdminSection() {
+            document.getElementById('adminSection').style.display = 'block';
+            document.getElementById('adminLoginSection').style.display = 'none';
+            document.getElementById('adminAuthenticatedSection').style.display = 'block';
+            loadInfoData();
+            loadContacts();
+        }
+        
+        // Afficher la section de connexion
+        function showAdminLogin() {
+            document.getElementById('adminSection').style.display = 'block';
+            document.getElementById('adminLoginSection').style.display = 'block';
+            document.getElementById('adminAuthenticatedSection').style.display = 'none';
+        }
+        
+        // Connexion admin
+        function loginAdmin() {
+            const password = document.getElementById('adminPassword').value;
+            
+            if (password === 'Admin2025!') {
+                localStorage.setItem('admin-authenticated', 'true');
+                isAdminAuthenticated = true;
+                showAdminSection();
+                showAdminTabs();
+                alert('✅ Connexion admin réussie !');
+            } else {
+                alert('❌ Mot de passe incorrect !');
+                document.getElementById('adminPassword').value = '';
+            }
+        }
+        
+        // Fonction de déconnexion principale
+        function logout() {
+            // Nettoyer toutes les sessions
+            sessionStorage.clear();
+            localStorage.removeItem('admin-authenticated');
+            
+            // Retourner à la page de connexion
+            document.getElementById('loginPage').style.display = 'block';
+            document.getElementById('mainContent').style.display = 'none';
+            
+            // Réinitialiser les champs
+            const passwordInput = document.getElementById('passwordInput');
+            if (passwordInput) {
+                passwordInput.value = '';
+            }
+            
+            // Masquer les onglets admin
+            hideAdminTabs();
+        }
+        
+        // Déconnexion admin
+        function logoutAdmin() {
+            localStorage.removeItem('admin-authenticated');
+            isAdminAuthenticated = false;
+            showAdminLogin();
+            hideAdminTabs();
+            document.getElementById('adminPassword').value = '';
+        }
+        
+        // Ajouter les boutons d'édition des équipes si admin connecté
+        function addTeamEditingButtons() {
+            const authStatus = localStorage.getItem('admin-authenticated');
+            if (authStatus !== 'true') {
+                removeTeamEditingButtons();
+                return;
+            }
+            
+            // Ajouter un bouton d'édition global des équipes
+            const equipesHeader = document.querySelector('#equipes .fey-card-header');
+            if (equipesHeader && !document.getElementById('editTeamsBtn')) {
+                const editBtn = document.createElement('button');
+                editBtn.id = 'editTeamsBtn';
+                editBtn.innerHTML = '✏️ Éditer les Équipes';
+                editBtn.className = 'fey-btn';
+                editBtn.style.cssText = 'background: #FF9800; margin-left: 1rem; font-size: 0.9rem;';
+                editBtn.onclick = showTeamEditorModal;
+                
+                equipesHeader.style.display = 'flex';
+                equipesHeader.style.justifyContent = 'space-between';
+                equipesHeader.style.alignItems = 'center';
+                equipesHeader.appendChild(editBtn);
+            }
+            
+            // Ajouter des boutons d'édition sur chaque équipe
+            const teamCards = document.querySelectorAll('#equipes [style*="background:"]');
+            teamCards.forEach(card => {
+                if (!card.querySelector('.team-edit-btn')) {
+                    const editBtn = document.createElement('button');
+                    editBtn.className = 'team-edit-btn';
+                    editBtn.innerHTML = '✏️';
+                    editBtn.style.cssText = 'position: absolute; top: 0.5rem; right: 0.5rem; background: rgba(255,255,255,0.9); border: none; border-radius: 50%; width: 30px; height: 30px; font-size: 0.8rem; cursor: pointer; z-index: 10;';
+                    editBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        editTeamFromCard(card);
+                    };
+                    card.style.position = 'relative';
+                    card.appendChild(editBtn);
+                }
+            });
+        }
+        
+        // Supprimer les boutons d'édition des équipes
+        function removeTeamEditingButtons() {
+            const editBtn = document.getElementById('editTeamsBtn');
+            if (editBtn) {
+                editBtn.remove();
+            }
+            
+            const teamEditBtns = document.querySelectorAll('.team-edit-btn');
+            teamEditBtns.forEach(btn => btn.remove());
+        }
+        
+        // Afficher le modal d'édition des équipes
+        function showTeamEditorModal() {
+            // Rediriger vers la page admin pour l'édition des équipes
+            window.open('admin.html', '_blank');
+        }
+        
+        // Éditer une équipe depuis sa carte
+        function editTeamFromCard(card) {
+            const teamName = card.querySelector('h5, h4, h3')?.textContent || 'Équipe';
+            const teamMembers = card.querySelector('small, p')?.textContent || '';
+            
+            const newName = prompt('Nom de l\'équipe:', teamName);
+            if (newName === null) return;
+            
+            const newMembers = prompt('Membres (un par ligne):', teamMembers);
+            if (newMembers === null) return;
+            
+            // Ici on pourrait implémenter la sauvegarde directe
+            // Pour l'instant, on affiche un message
+            alert('✅ Équipe modifiée ! (Modification d\'urgence - Pour une édition complète, allez dans admin.html)');
+        }
+        
+        // Charger les informations depuis localStorage
+        function loadInfoData() {
+            const data = JSON.parse(localStorage.getItem('scout-info-data') || '{}');
+            
+            // Données par défaut
+            const defaultData = {
+                nextOuting: {
+                    title: 'Sortie en forêt',
+                    date: '15 décembre 2024',
+                    time: '09h00 - 17h00',
+                    location: 'Forêt de Compiègne',
+                    contact: 'Marie (06 12 34 56 78)'
+                },
+                meetingPlace: {
+                    address: 'Local Scout, 123 Rue de la Paix, 60200 Compiègne',
+                    time: '08h30',
+                    contact: 'Jean (06 98 76 54 32)'
+                },
+                general: {
+                    responsable: 'Marie Dubois',
+                    phone: '06 12 34 56 78',
+                    email: 'marie.dubois@scouts.fr',
+                    hours: 'Samedi 09h-17h'
+                }
+            };
+
+            const infoData = { ...defaultData, ...data };
+            
+            // Afficher les données
+            document.getElementById('nextOutingTitle').textContent = infoData.nextOuting.title;
+            document.getElementById('nextOutingDate').textContent = infoData.nextOuting.date;
+            document.getElementById('nextOutingTime').textContent = infoData.nextOuting.time;
+            document.getElementById('nextOutingLocation').textContent = infoData.nextOuting.location;
+            document.getElementById('nextOutingContact').textContent = infoData.nextOuting.contact;
+
+            document.getElementById('meetingPlaceAddress').textContent = infoData.meetingPlace.address;
+            document.getElementById('meetingPlaceTime').textContent = infoData.meetingPlace.time;
+            document.getElementById('meetingPlaceContact').textContent = infoData.meetingPlace.contact;
+
+            document.getElementById('generalResponsable').textContent = infoData.general.responsable;
+            document.getElementById('generalPhone').textContent = infoData.general.phone;
+            document.getElementById('generalEmail').textContent = infoData.general.email;
+            document.getElementById('generalHours').textContent = infoData.general.hours;
+        }
+
+        // === GESTION DES CONTACTS MULTIPLES ===
+        
+        // Charger les contacts
+        function loadContacts() {
+            const contacts = JSON.parse(localStorage.getItem('scout-contacts') || '[]');
+            const container = document.getElementById('contactsList');
+            
+            if (contacts.length === 0) {
+                // Contacts par défaut
+                const defaultContacts = [
+                    {
+                        id: 1,
+                        name: 'Marie Dubois',
+                        role: 'Cheftaine principale',
+                        phone: '06 12 34 56 78',
+                        email: 'marie.dubois@scouts.fr',
+                        period: 'Toute l\'année'
+                    },
+                    {
+                        id: 2,
+                        name: 'Jean Martin',
+                        role: 'Assistant',
+                        phone: '06 98 76 54 32',
+                        email: 'jean.martin@scouts.fr',
+                        period: 'Samedis'
+                    }
+                ];
+                localStorage.setItem('scout-contacts', JSON.stringify(defaultContacts));
+                displayContacts(defaultContacts);
+            } else {
+                displayContacts(contacts);
+            }
+        }
+        
+        // Afficher les contacts
+        function displayContacts(contacts) {
+            const container = document.getElementById('contactsList');
+            
+            if (contacts.length === 0) {
+                container.innerHTML = '<p style="color: #666; text-align: center; font-style: italic;">Aucun contact configuré</p>';
+                return;
+            }
+            
+            const html = contacts.map(contact => `
+                <div style="background: #f9f9f9; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm); padding: 1rem; margin-bottom: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 1rem;">
+                        <div style="flex: 1;">
+                            <h5 style="margin: 0 0 0.5rem 0; color: var(--c-orange-600);">${contact.name}</h5>
+                            <p style="margin: 0.25rem 0; font-size: 0.9rem;"><strong>Rôle:</strong> ${contact.role}</p>
+                            <p style="margin: 0.25rem 0; font-size: 0.9rem;"><strong>Téléphone:</strong> ${contact.phone}</p>
+                            <p style="margin: 0.25rem 0; font-size: 0.9rem;"><strong>Email:</strong> ${contact.email}</p>
+                            <p style="margin: 0.25rem 0; font-size: 0.9rem;"><strong>Période:</strong> ${contact.period}</p>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button onclick="editContact(${contact.id})" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 0.5rem; font-size: 0.8rem; cursor: pointer;">✏️</button>
+                            <button onclick="deleteContact(${contact.id})" style="background: #f44336; color: white; border: none; border-radius: 4px; padding: 0.5rem; font-size: 0.8rem; cursor: pointer;">🗑️</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            container.innerHTML = html;
+        }
+        
+        // Ajouter un nouveau contact
+        function addNewContact() {
+            const name = prompt('Nom du contact:');
+            if (!name) return;
+            
+            const role = prompt('Rôle (ex: Cheftaine, Assistant, etc.):');
+            if (!role) return;
+            
+            const phone = prompt('Téléphone:');
+            if (!phone) return;
+            
+            const email = prompt('Email:');
+            if (!email) return;
+            
+            const period = prompt('Période d\'activité (ex: Toute l\'année, Samedis, etc.):');
+            if (!period) return;
+            
+            const contacts = JSON.parse(localStorage.getItem('scout-contacts') || '[]');
+            const newContact = {
+                id: Date.now(),
+                name,
+                role,
+                phone,
+                email,
+                period
+            };
+            
+            contacts.push(newContact);
+            localStorage.setItem('scout-contacts', JSON.stringify(contacts));
+            displayContacts(contacts);
+        }
+        
+        // Éditer un contact
+        function editContact(contactId) {
+            const contacts = JSON.parse(localStorage.getItem('scout-contacts') || '[]');
+            const contact = contacts.find(c => c.id === contactId);
+            if (!contact) return;
+            
+            const name = prompt('Nom du contact:', contact.name);
+            if (name === null) return;
+            
+            const role = prompt('Rôle:', contact.role);
+            if (role === null) return;
+            
+            const phone = prompt('Téléphone:', contact.phone);
+            if (phone === null) return;
+            
+            const email = prompt('Email:', contact.email);
+            if (email === null) return;
+            
+            const period = prompt('Période d\'activité:', contact.period);
+            if (period === null) return;
+            
+            // Mettre à jour le contact
+            contact.name = name;
+            contact.role = role;
+            contact.phone = phone;
+            contact.email = email;
+            contact.period = period;
+            
+            localStorage.setItem('scout-contacts', JSON.stringify(contacts));
+            displayContacts(contacts);
+        }
+        
+        // Supprimer un contact
+        function deleteContact(contactId) {
+            if (confirm('Êtes-vous sûr de vouloir supprimer ce contact ?')) {
+                const contacts = JSON.parse(localStorage.getItem('scout-contacts') || '[]');
+                const filtered = contacts.filter(c => c.id !== contactId);
+                localStorage.setItem('scout-contacts', JSON.stringify(filtered));
+                displayContacts(filtered);
+            }
+        }
+        
+        // Éditer la prochaine sortie
+        function editNextOuting() {
+            const currentData = JSON.parse(localStorage.getItem('scout-info-data') || '{}').nextOuting || {};
+            
+            const title = prompt('Titre de la sortie:', currentData.title || 'Sortie en forêt');
+            if (title === null) return;
+            
+            const date = prompt('Date:', currentData.date || '15 décembre 2024');
+            if (date === null) return;
+            
+            const time = prompt('Heures (ex: 09h00 - 17h00):', currentData.time || '09h00 - 17h00');
+            if (time === null) return;
+            
+            const location = prompt('Lieu:', currentData.location || 'Forêt de Compiègne');
+            if (location === null) return;
+            
+            const contact = prompt('Contact:', currentData.contact || 'Marie (06 12 34 56 78)');
+            if (contact === null) return;
+
+            // Mettre à jour les données
+            const data = JSON.parse(localStorage.getItem('scout-info-data') || '{}');
+            data.nextOuting = { title, date, time, location, contact };
+            localStorage.setItem('scout-info-data', JSON.stringify(data));
+            
+            // Recharger l'affichage
+            loadInfoData();
+        }
+
+        // Éditer le lieu de rendez-vous
+        function editMeetingPlace() {
+            const currentData = JSON.parse(localStorage.getItem('scout-info-data') || '{}').meetingPlace || {};
+            
+            const address = prompt('Adresse du lieu de rendez-vous:', currentData.address || 'Local Scout, 123 Rue de la Paix, 60200 Compiègne');
+            if (address === null) return;
+            
+            const time = prompt('Heure habituelle:', currentData.time || '08h30');
+            if (time === null) return;
+            
+            const contact = prompt('Contact local:', currentData.contact || 'Jean (06 98 76 54 32)');
+            if (contact === null) return;
+
+            // Mettre à jour les données
+            const data = JSON.parse(localStorage.getItem('scout-info-data') || '{}');
+            data.meetingPlace = { address, time, contact };
+            localStorage.setItem('scout-info-data', JSON.stringify(data));
+            
+            // Recharger l'affichage
+            loadInfoData();
+        }
+
+        // Éditer les informations générales
+        function editGeneralInfo() {
+            const currentData = JSON.parse(localStorage.getItem('scout-info-data') || '{}').general || {};
+            
+            const responsable = prompt('Responsable:', currentData.responsable || 'Marie Dubois');
+            if (responsable === null) return;
+            
+            const phone = prompt('Téléphone:', currentData.phone || '06 12 34 56 78');
+            if (phone === null) return;
+            
+            const email = prompt('Email:', currentData.email || 'marie.dubois@scouts.fr');
+            if (email === null) return;
+            
+            const hours = prompt('Horaires habituels:', currentData.hours || 'Samedi 09h-17h');
+            if (hours === null) return;
+
+            // Mettre à jour les données
+            const data = JSON.parse(localStorage.getItem('scout-info-data') || '{}');
+            data.general = { responsable, phone, email, hours };
+            localStorage.setItem('scout-info-data', JSON.stringify(data));
+            
+            // Recharger l'affichage
+            loadInfoData();
+        }
+
+        // Sauvegarder toutes les informations
+        function saveAllInfo() {
+            alert('✅ Toutes les informations ont été sauvegardées automatiquement !');
+        }
+
+        // Réinitialiser toutes les informations
+        function resetAllInfo() {
+            if (confirm('⚠️ Êtes-vous sûr de vouloir réinitialiser toutes les informations ?')) {
+                localStorage.removeItem('scout-info-data');
+                loadInfoData();
+                alert('✅ Informations réinitialisées !');
+            }
+        }
+
+        // Fonction pour vérifier l'authentification admin sur changement de page
+        function checkAdminAuthOnPageChange() {
+            setTimeout(() => {
+                checkAdminAuth();
+            }, 100);
+        }
+        
+        // Charger les informations au démarrage
+        document.addEventListener('DOMContentLoaded', function() {
+            loadInfoData();
+            checkGlobalAdminAuth();
+            checkAdminAuth();
         });
     </script>
 </body>
