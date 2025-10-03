@@ -45,7 +45,7 @@ body {
     font-family: 'Nunito', sans-serif;
     background: linear-gradient(135deg, var(--c-forest-700) 0%, var(--c-marine-900) 100%);
     min-height: 100vh;
-    padding: 1rem;
+    padding: 0.5rem;
     position: relative;
     overflow-x: hidden;
 }
@@ -396,7 +396,8 @@ body {
     background: var(--c-parchment-50);
     border-radius: var(--r-lg);
     padding: 2rem;
-    max-width: 900px;
+    width: calc(100vw - 3rem);
+    max-width: none;
     margin: 0 auto;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5),
                 inset0 0 50px rgba(139, 90, 43, 0.1);
@@ -858,6 +859,15 @@ body {
 
     .fey-stat {
         min-width: 100%;
+    }
+
+    /* Calendrier responsive */
+    .fey-qr-card iframe {
+        height: 300px !important;
+    }
+    
+    .fey-qr-grid {
+        grid-template-columns: 1fr;
     }
 }
 

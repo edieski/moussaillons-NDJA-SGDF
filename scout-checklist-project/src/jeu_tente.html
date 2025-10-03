@@ -246,8 +246,8 @@
             border-bottom: 40px solid var(--orange);
         }
 
-        .chanson-tente {
-            background: linear-gradient(135deg, #ff6b6b, var(--gold));
+        .technique-illustration {
+            background: linear-gradient(135deg, #2E7D32, #4CAF50);
             color: white;
             padding: 1.5rem;
             border-radius: 16px;
@@ -256,17 +256,188 @@
             text-align: center;
         }
 
-        .chanson-tente h3 {
+        .technique-illustration h3 {
             font-family: 'Patrick Hand', cursive;
             font-size: 1.5rem;
             margin-bottom: 1rem;
+            color: var(--gold);
         }
 
-        .chanson-tente .vers {
-            font-size: 1.1rem;
-            line-height: 1.8;
+        .steps-visual {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .step-visual {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1rem;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .step-visual:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .step-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .step-text {
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        .step-text strong {
+            color: var(--gold);
+            font-family: 'Patrick Hand', cursive;
+        }
+
+        .step-image {
+            width: 80px;
+            height: 60px;
+            margin: 0.5rem auto;
+            border-radius: 8px;
+            position: relative;
+        }
+
+        /* Illustration terrain plat */
+        .terrain-image {
+            background: linear-gradient(to bottom, #4CAF50 0%, #2E7D32 100%);
+            border: 2px solid #1B5E20;
+        }
+
+        .terrain-image::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 20px;
+            background: linear-gradient(90deg, #4CAF50, #66BB6A, #4CAF50);
+            border-radius: 6px 6px 0 0;
+        }
+
+        /* Illustration piquet à 45° */
+        .piquet-image {
+            background: #2C3E50;
+            position: relative;
+        }
+
+        .piquet-image::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 3px;
+            height: 40px;
+            background: #8B4513;
+            transform-origin: bottom;
+            transform: translateX(-50%) rotate(45deg);
+        }
+
+        .piquet-image::after {
+            content: '45°';
+            position: absolute;
+            top: 10px;
+            right: 5px;
+            font-size: 10px;
+            color: #FFD700;
             font-weight: bold;
-            margin: 0.5rem 0;
+        }
+
+        /* Illustration mât central */
+        .mat-image {
+            background: #2C3E50;
+            position: relative;
+        }
+
+        .mat-image::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 50px;
+            background: #8B4513;
+        }
+
+        .mat-image::after {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-bottom: 12px solid #FFD700;
+        }
+
+        /* Illustration haubans */
+        .hauban-image {
+            background: #2C3E50;
+            position: relative;
+        }
+
+        .hauban-image::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 3px;
+            height: 40px;
+            background: #8B4513;
+        }
+
+        .hauban-image::after {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            height: 2px;
+            background: #FFD700;
+            transform: rotate(-15deg);
+        }
+
+        /* Illustration tente complète */
+        .tente-image {
+            background: #2C3E50;
+            position: relative;
+        }
+
+        .tente-image::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 10px;
+            right: 10px;
+            height: 30px;
+            background: linear-gradient(135deg, #8B4513, #A0522D);
+            border-radius: 4px;
+        }
+
+        .tente-image::after {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 25px solid transparent;
+            border-right: 25px solid transparent;
+            border-bottom: 20px solid #FFD700;
         }
 
         .elements-container {
@@ -320,6 +491,18 @@
             transform: translate(-50%, -50%);
             font-size: 0.8rem;
             font-weight: bold;
+        }
+
+        /* Animations pour le jeu avancé */
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+
+        @keyframes float {
+            from { transform: translateX(-100px); }
+            to { transform: translateX(calc(100vw + 100px)); }
         }
 
         /* Responsive */
@@ -411,7 +594,10 @@
                 </div>
             </div>
             <div class="bouton-container">
-                <button class="btn" onclick="verifierEtape1()">🔍 Vérifier</button>
+                <div style="display: flex; gap: 1rem; justify-content: center;">
+                    <button class="btn" onclick="retourEtapePrecedente()" style="background: #666;">⬅️ Retour</button>
+                    <button class="btn" onclick="verifierEtape1()">🔍 Vérifier</button>
+    </div>
             </div>
         </div>
 
@@ -436,7 +622,10 @@
                 </div>
             </div>
             <div class="bouton-container">
-                <button class="btn" onclick="verifierEtape2()">🔍 Vérifier</button>
+                <div style="display: flex; gap: 1rem; justify-content: center;">
+                    <button class="btn" onclick="retourEtapePrecedente()" style="background: #666;">⬅️ Retour</button>
+                    <button class="btn" onclick="verifierEtape2()">🔍 Vérifier</button>
+                </div>
             </div>
         </div>
 
@@ -461,7 +650,10 @@
                 </div>
             </div>
             <div class="bouton-container">
-                <button class="btn" onclick="verifierEtape3()">🔍 Vérifier</button>
+                <div style="display: flex; gap: 1rem; justify-content: center;">
+                    <button class="btn" onclick="retourEtapePrecedente()" style="background: #666;">⬅️ Retour</button>
+                    <button class="btn" onclick="verifierEtape3()">🔍 Vérifier</button>
+                </div>
             </div>
         </div>
 
@@ -469,21 +661,24 @@
         <div class="etape-container" id="etape4">
             <h2 class="etape-header">🏗️ Étape 4: Installer le mât</h2>
             <div class="etape-description">
-                <strong>🎯 Mission :</strong> Place le mât au bon endroit !<br>
+                <strong>🎯 Mission :</strong> Clique sur le mât pour l'installer !<br>
                 <strong>💡 Astuce :</strong> Le mât central doit être positionné exactement au centre de la toile.
             </div>
             <div class="zone-jeu">
                 <div class="tente-visuelle" id="tente-montage">
-                    <div class="element-draggable" draggable="true" data-correct="true" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                    <div class="element-draggable" draggable="true" data-correct="true" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); cursor: pointer;" onclick="installerMat()">
                         🏗️ Mât central
                     </div>
                 </div>
                 <div class="zone-depot" id="mat-zone">
-                    <p>Déplace le mât au centre !</p>
+                    <p>Clique sur le mât pour l'installer !</p>
                 </div>
             </div>
             <div class="bouton-container">
-                <button class="btn" onclick="verifierEtape4()">🔍 Vérifier</button>
+                <div style="display: flex; gap: 1rem; justify-content: center;">
+                    <button class="btn" onclick="retourEtapePrecedente()" style="background: #666;">⬅️ Retour</button>
+                    <button class="btn" onclick="verifierEtape4()">🔍 Vérifier</button>
+                </div>
             </div>
         </div>
 
@@ -508,7 +703,10 @@
                 </div>
             </div>
             <div class="bouton-container">
-                <button class="btn" onclick="verifierEtape5()">🔍 Vérifier</button>
+                <div style="display: flex; gap: 1rem; justify-content: center;">
+                    <button class="btn" onclick="retourEtapePrecedente()" style="background: #666;">⬅️ Retour</button>
+                    <button class="btn" onclick="verifierEtape5()">🔍 Vérifier</button>
+                </div>
             </div>
         </div>
 
@@ -533,7 +731,10 @@
                 </div>
             </div>
             <div class="bouton-container">
-                <button class="btn" onclick="verifierEtape6()">🔍 Vérifier</button>
+                <div style="display: flex; gap: 1rem; justify-content: center;">
+                    <button class="btn" onclick="retourEtapePrecedente()" style="background: #666;">⬅️ Retour</button>
+                    <button class="btn" onclick="verifierEtape6()">🔍 Vérifier</button>
+                </div>
             </div>
         </div>
 
@@ -545,15 +746,111 @@
                 Tu es maintenant prêt pour de vraies aventures scoutes !
             </div>
             <div class="tente-visuelle complete"></div>
-            <div class="chanson-tente">
-                <h3>🎵 Chanson de la tente 🎵</h3>
-                <div class="vers">🎶 "Terrain plat, toile au sol" 🎶</div>
-                <div class="vers">🎶 "Piquets en angle, mât au centre" 🎶</div>
-                <div class="vers">🎶 "Haubans tendus, double-toit" 🎶</div>
-                <div class="vers">🎶 "Et voilà, tente debout !" 🎶</div>
+            <div class="technique-illustration">
+                <h3>📖 Pour un visuel complet, consultez les carnets pages 44-46</h3>
+                <div class="steps-visual">
+                    <div class="step-visual">
+                        <div class="step-icon">🌱</div>
+                        <div class="step-text">
+                            <strong>1. Terrain plat</strong><br>
+                            Choisir un sol dégagé, sans pierres
+                        </div>
+                        <div class="step-image terrain-image"></div>
+                    </div>
+                    <div class="step-visual">
+                        <div class="step-icon">📐</div>
+                        <div class="step-text">
+                            <strong>2. Piquets à 45°</strong><br>
+                            Angle vers l'extérieur pour la stabilité
+                        </div>
+                        <div class="step-image piquet-image"></div>
+                    </div>
+                    <div class="step-visual">
+                        <div class="step-icon">🏗️</div>
+                        <div class="step-text">
+                            <strong>3. Mât central</strong><br>
+                            Position exacte au centre de la toile
+                        </div>
+                        <div class="step-image mat-image"></div>
+                    </div>
+                    <div class="step-visual">
+                        <div class="step-icon">🔗</div>
+                        <div class="step-text">
+                            <strong>4. Haubans tendus</strong><br>
+                            Ajuster et tendre les cordes
+                        </div>
+                        <div class="step-image hauban-image"></div>
+                    </div>
+                    <div class="step-visual">
+                        <div class="step-icon">🌧️</div>
+                        <div class="step-text">
+                            <strong>5. Double-toit</strong><br>
+                            Protection contre la pluie
+                        </div>
+                        <div class="step-image tente-image"></div>
+                    </div>
+                </div>
             </div>
             <div class="bouton-container">
                 <button class="btn" onclick="recommencer()">🔄 Recommencer</button>
+                <button class="btn" onclick="lancerModeFlappy()" style="background: #9C27B0;">🎮 Mode Flappy Bird</button>
+            </div>
+        </div>
+
+        <!-- Mode Flappy Bird Avancé -->
+        <div class="etape-container" id="flappy-mode">
+            <h2 class="etape-header">🎮 Tente Bird - Quiz des Étapes !</h2>
+            <div class="etape-description">
+                <strong>🎯 Mission :</strong> Guide l'oiseau à travers les étapes en répondant aux questions !<br>
+                <strong>💡 Astuce :</strong> Clique ou appuie sur ESPACE pour voler, et choisis la bonne réponse !
+            </div>
+            
+            <div class="game-container" style="position: relative; width: 100%; height: 400px; overflow: hidden; background: linear-gradient(to bottom, #87CEEB 0%, #98FB98 70%, #90EE90 100%); border-radius: 12px; margin: 1rem 0; border: 3px solid var(--wood);">
+h: 100%; height: 100%;"></canvas>
+                <div class="bird" id="bird" style="position: absolute; width: 60px; height: 60px; background: #FFD700; border-radius: 50%; border: 3px solid #FFA500; transition: transform 0.1s ease; z-index: 10; display: flex; align-items: center; justify-content: center; font-size: 24px;">🏕️</div>
+                
+                <div class="ui" style="position: absolute; top: 20px; right: 20px; z-index: 20; color: #2C3E50;">
+                    <div class="score" style="font-size: 24px; font-weight: bold; margin-bottom: 10px;">Étape: <span id="score">1</span>/6</div>
+                    <div class="timer" style="font-size: 16px; font-weight: bold; margin-bottom: 5px; color: #27AE60;">⏱️ Temps: <span id="gameTimer">0</span>s | Étape: <span id="stepTimer">0</span>s</div>
+                    <div class="difficulty" style="font-size: 14px; margin-bottom: 10px; color: #8E44AD;">🎯 Niveau: <span id="difficulty">Débutant</span></div>
+                    <div class="question-panel" style="background: rgba(255, 255, 255, 0.95); padding: 15px; border-radius: 15px; border: 3px solid #E74C3C; max-width: 280px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                        <div class="question-title" style="font-weight: bold; color: #E74C3C; margin-bottom: 10px; font-size: 18px;">🤔 Quelle est la prochaine étape ?</div>
+                        <div class="question-text" id="questionText" style="color: #2C3E50; margin-bottom: 10px; font-size: 14px;">🏕️ Tu arrives au camp. Que fais-tu en PREMIER ?</div>
+                        <div class="time-limit" style="font-size: 12px; color: #E67E22; margin-bottom: 10px; font-weight: bold;">⏰ Temps recommandé: <span id="timeLimit">5</span> minutes</div>
+                        <div style="font-size: 12px; color: #7F8C8D;">Clique sur la bonne réponse pour continuer !</div>
+                    </div>
+                </div>
+
+                <div class="controls" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); text-align: center; color: #2C3E50; background: rgba(255, 255, 255, 0.9); padding: 15px; border-radius: 15px; border: 3px solid #3498DB;">
+                    <div><strong>🎮 CONTRÔLES</strong></div>
+                    <div>Clique ou appuie sur ESPACE pour voler !</div>
+                    <div>Choisis la bonne étape pour passer ! 🏕️</div>
+                </div>
+
+                <div class="paused" id="paused" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(52, 73, 94, 0.95); color: white; padding: 20px; border-radius: 15px; text-align: center; z-index: 25; display: none;">
+                    <h3>🎯 Choisis ta réponse !</h3>
+                    <p>Le jeu reprendra quand tu auras choisi la bonne étape.</p>
+                    <button onclick="skipQuestion()" style="background: #E74C3C; color: white; border: none; padding: 8px 16px; border-radius: 15px; margin-top: 10px; cursor: pointer; font-size: 14px;">⏭️ Passer cette question</button>
+                </div>
+
+                <div class="game-over" id="gameOver" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(231, 76, 60, 0.95); color: white; padding: 30px; border-radius: 20px; text-align: center; border: 4px solid #C0392B; z-index: 30; display: none;">
+                    <h2>🚫 Oups !</h2>
+                    <p>Mauvaise réponse ! Révise les étapes de montage de tente et réessaie.</p>
+                    <button class="restart-btn" onclick="restartGame()" style="background: #3498DB; color: white; border: none; padding: 12px 24px; border-radius: 25px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 15px; transition: background 0.3s;">Recommencer</button>
+                </div>
+
+                <div class="success" id="success" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(46, 204, 113, 0.95); color: white; padding: 30px; border-radius: 20px; text-align: center; border: 4px solid #27AE60; z-index: 30; display: none;">
+                    <h2>🎉 Bravo Louveteau !</h2>
+                    <p>Tu connais parfaitement les étapes pour monter une tente !</p>
+                    <p>Tu es prêt pour le camp ! 🏕️</p>
+                    <button class="restart-btn" onclick="restartGame()" style="background: #3498DB; color: white; border: none; padding: 12px 24px; border-radius: 25px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 15px; transition: background 0.3s;">Rejouer</button>
+                </div>
+            </div>
+            
+            <div class="bouton-container">
+                <button class="btn" onclick="retourAuJeuPrincipal()" style="background: #666;">⬅️ Retour au Jeu</button>
+                <button class="btn" onclick="goBackStep()" style="background: #FF9800;">⬅️ Étape Précédente</button>
+                <button class="btn" onclick="restartGame()">🔄 Recommencer Flappy</button>
             </div>
         </div>
     </div>
@@ -611,78 +908,90 @@
             const isCorrect = e.dataTransfer.getData('correct') === 'true';
             const zoneId = e.target.id;
             
+            console.log('Drop:', { zoneId, isCorrect, html }); // Debug
+            
+            // Vider la zone et insérer le nouvel élément
             e.target.innerHTML = '';
             e.target.insertAdjacentHTML('beforeend', html);
-            elementsDeposes[zoneId] = { html, isCorrect };
+            
+            // Stocker l'élément avec ses propriétés
+            elementsDeposes[zoneId] = { 
+                html: html, 
+                isCorrect: isCorrect,
+                zoneId: zoneId
+            };
+            
+            console.log('Elements déposés après drop:', elementsDeposes); // Debug
+            console.log('Zone actuelle:', zoneId, 'Élément stocké:', elementsDeposes[zoneId]); // Debug
         }
 
         function verifierEtape1() {
-            const element = elementsDeposes['terrain-zone'];
-            if (element && element.isCorrect) {
-                showFeedback('success', '🎉 Parfait ! Un terrain plat et dégagé est idéal !');
-                score += 10;
+            const success = verifierEtapeGenerique(
+                'terrain-zone',
+                '🎉 Parfait ! Un terrain plat et dégagé est idéal !',
+                '❌ Pas tout à fait ! Un terrain plat et dégagé est mieux pour la stabilité.'
+            );
+            if (success) {
                 setTimeout(() => passerEtapeSuivante(), 1500);
-            } else {
-                showFeedback('error', '❌ Pas tout à fait ! Un terrain plat et dégagé est mieux pour la stabilité.');
             }
         }
 
         function verifierEtape2() {
-            const element = elementsDeposes['toile-zone'];
-            if (element && element.isCorrect) {
-                showFeedback('success', '🎉 Excellent ! Une toile bien étalée facilite le montage !');
-                score += 10;
+            const success = verifierEtapeGenerique(
+                'toile-zone',
+                '🎉 Excellent ! Une toile bien étalée facilite le montage !',
+                '❌ Presque ! Il faut étaler complètement la toile pour un montage propre.'
+            );
+            if (success) {
                 setTimeout(() => passerEtapeSuivante(), 1500);
-            } else {
-                showFeedback('error', '❌ Presque ! Il faut étaler complètement la toile pour un montage propre.');
             }
         }
 
         function verifierEtape3() {
-            const element = elementsDeposes['piquets-zone'];
-            if (element && element.isCorrect) {
-                showFeedback('success', '🎉 Bravo ! Les piquets à 45° assurent une meilleure stabilité !');
-                score += 10;
+            const success = verifierEtapeGenerique(
+                'piquets-zone',
+                '🎉 Bravo ! Les piquets à 45° assurent une meilleure stabilité !',
+                '❌ Pas tout à fait ! Les piquets doivent être à 45° vers l\'extérieur.'
+            );
+            if (success) {
                 setTimeout(() => passerEtapeSuivante(), 1500);
-            } else {
-                showFeedback('error', '❌ Pas tout à fait ! Les piquets doivent être à 45° vers l\'extérieur.');
             }
         }
 
         function verifierEtape4() {
-            const element = elementsDeposes['mat-zone'];
-            if (element && element.isCorrect) {
-                showFeedback('success', '🎉 Parfait ! Le mât central est bien positionné !');
-                score += 10;
+            const success = verifierEtapeGenerique(
+                'mat-zone',
+                '🎉 Parfait ! Le mât central est bien positionné !',
+                '❌ Presque ! Le mât doit être exactement au centre de la toile.'
+            );
+            if (success) {
                 setTimeout(() => passerEtapeSuivante(), 1500);
-            } else {
-                showFeedback('error', '❌ Presque ! Le mât doit être exactement au centre de la toile.');
             }
         }
 
         function verifierEtape5() {
-            const element = elementsDeposes['haubans-zone'];
-            if (element && element.isCorrect) {
-                showFeedback('success', '🎉 Excellent ! Des haubans bien tendus maintiennent la tente stable !');
-                score += 10;
-                setTimeout(() => passerEtapeSuivante(), 1500);
-            } else {
-                showFeedback('error', '❌ Pas tout à fait ! Les haubans doivent être tendus et ajustés.');
+            const success = verifierEtapeGenerique(
+                'haubans-zone',
+                '🎉 Excellent ! Des haubans bien tendus maintiennent la tente stable !',
+                '❌ Pas tout à fait ! Les haubans doivent être tendus et ajustés.'
+            );
+            if (success) {
+imeout(() => passerEtapeSuivante(), 1500);
             }
         }
 
         function verifierEtape6() {
-            const element = elementsDeposes['protection-zone'];
-            if (element && element.isCorrect) {
-                showFeedback('success', '🎉 Bravo ! Le double-toit protège parfaitement de la pluie !');
-                score += 10;
+            const success = verifierEtapeGenerique(
+                'protection-zone',
+                '🎉 Bravo ! Le double-toit protège parfaitement de la pluie !',
+                '❌ Presque ! Le double-toit est essentiel pour la protection.'
+            );
+            if (success) {
                 setTimeout(() => {
                     document.getElementById('etape6').classList.remove('active');
                     document.getElementById('fin-jeu').classList.add('active');
                     updateProgress();
                 }, 1500);
-            } else {
-                showFeedback('error', '❌ Presque ! Le double-toit est essentiel pour la protection.');
             }
         }
 
@@ -693,6 +1002,109 @@
             updateProgress();
             updateScore();
             updateEtapeIndicator();
+        }
+
+        function retourEtapePrecedente() {
+            if (etapeActuelle > 1) {
+                document.getElementById(`etape${etapeActuelle}`).classList.remove('active');
+                etapeActuelle--;
+                document.getElementById(`etape${etapeActuelle}`).classList.add('active');
+                
+                // Réinitialiser la zone de dépôt de l'étape précédente
+                const zoneId = getZoneIdForEtape(etapeActuelle);
+                if (zoneId && elementsDeposes[zoneId]) {
+                    delete elementsDeposes[zoneId];
+                    const zone = document.getElementById(zoneId);
+                    if (zone) {
+                        zone.innerHTML = '<p>Dépose ici la bonne réponse !</p>';
+                    }
+                }
+                
+                updateProgress();
+                updateEtapeIndicator();
+            }
+        }
+
+        function getZoneIdForEtape(etape) {
+            const zoneIds = {
+                1: 'terrain-zone',
+                2: 'toile-zone', 
+                3: 'piquets-zone',
+                4: 'mat-zone',
+                5: 'haubans-zone',
+                6: 'protection-zone'
+            };
+            return zoneIds[etape];
+        }
+
+        function installerMat() {
+            const matElement = document.querySelector('#tente-montage .element-draggable');
+            const zone = document.getElementById('mat-zone');
+            
+            if (matElement && zone) {
+                // Marquer le mât comme installé visuellement
+                matElement.style.background = '#4CAF50';
+                matElement.style.color = 'white';
+                matElement.style.transform = 'translate(-50%, -50%) scale(1.1)';
+                matElement.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
+                
+                // Mettre à jour la zone de dépôt
+                zone.innerHTML = '<p style="color: #4CAF50; font-weight: bold;">✅ Mât installé !</p>';
+                
+                // Stocker l'élément comme déposé
+                elementsDeposes['mat-zone'] = { 
+                    html: matElement.outerHTML, 
+                    isCorrect: true,
+                    zoneId: 'mat-zone'
+                };
+                
+                console.log('Mât installé:', elementsDeposes['mat-zone']); // Debug
+                
+                // Désactiver le clic
+                matElement.onclick = null;
+                matElement.style.cursor = 'default';
+                
+                // Afficher un feedback
+                showFeedback('success', '🎉 Mât installé au centre !');
+            }
+        }
+
+        function verifierEtapeGenerique(zoneId, successMessage, errorMessage) {
+            const element = elementsDeposes[zoneId];
+            const zone = document.getElementById(zoneId);
+            const hasVisualElement = zone && zone.querySelector('.element-draggable');
+            
+            console.log(`Vérification ${zoneId}:`, { element, hasVisualElement, zone }); // Debug
+            
+            if (!element && !hasVisualElement) {
+                showFeedback('error', '❌ Aucun élément déposé ! Glisse un élément dans la zone de dépôt.');
+                return false;
+            }
+            
+            // Si on a un élément visuel mais pas dans elementsDeposes, on le vérifie visuellement
+            if (!element && hasVisualElement) {
+                const visualElement = zone.querySelector('.element-draggable');
+                const isCorrect = visualElement && visualElement.dataset.correct === 'true';
+                console.log('Vérification visuelle:', { isCorrect, dataset: visualElement?.dataset }); // Debug
+                
+                if (isCorrect) {
+                    showFeedback('success', successMessage);
+                    score += 10;
+                    return true;
+                } else {
+                    showFeedback('error', errorMessage);
+                    return false;
+                }
+            }
+            
+            if (element && element.isCorrect) {
+                showFeedback('success', successMessage);
+                score += 10;
+                return true;
+            } else {
+                showFeedback('error', errorMessage);
+                return false;
+            }
         }
 
         function showFeedback(type, message) {
@@ -740,7 +1152,7 @@
                 const dot = document.getElementById(`dot${etapeActuelle}`);
                 dot.classList.add('active');
             }
-        }
+
 
         function recommencer() {
             etapeActuelle = 1;
@@ -760,8 +1172,528 @@
             
             updateEtapeIndicator();
             updateProgress();
-            updateScore();
+
+
+
+        // Variables pour le mode Flappy Bird Avancé
+        let flappyScore = 0;
+        let etapeFlappyActuelle = 1;
+        let ordreCorrect = [1, 2, 3, 4, 5, 6];
+        let ordreSelectionne = [];
+
+        // Variables du jeu avancé
+        let canvas, ctx, bird, scoreElement, questionText, gameOverDiv, successDiv, pausedDiv;
+        let birdY, birdVelocity, gravity, jumpStrength, gameRunning, gamePaused, currentStep;
+        let pipes, gameSpeed, pipeWidth, gapHeight, choiceButtons, gameTimer, stepTimer, difficultyLevel;
+
+
+        // Questions et étapes (6 étapes détaillées)
+        const tentQuestions = [
+            {
+                question: "🏕️ Tu arrives au camp. Que fais-tu en PREMIER ?",
+                correct: "Choisir un sol plat, sec, sans pierres",
+                wrong: ["Déballer tout le matériel", "Étaler la toile directement", "Monter les mâts"],
+                time: 5
+            },
+            {
+                question: "🎒 Le terrain est parfait ! Maintenant ?",
+                correct: "Étaler la toile et fixer les 4 coins",
+                wrong: ["Monter les mâts en premier", "Installer le double-toit", "Planter toutes les sardines"],
+                time: 7
+            },
+            {
+                question: "📐 La toile est fixée. Quelle est l'étape suivante ?",
+                correct: "Glisser les mâts et monter la faitière",
+                wrong: ["Poser le double-toit", "Tendre toutes les cordes", "Installer le tapis de sol"],
+                time: 5
+            },
+            {
+                question: "⛺ Les mâts sont dressés ! Comment continuer ?",
+                correct: "Tendre le toit avec les cordes",
+                wrong: ["Poser le double-toit maintenant", "Vérifier l'intérieur", "Ranger les outils"],
+                time: 5
+            },
+            {
+                question: "🌧️ Le toit est tendu. Pour protéger de la pluie ?",
+                correct: "Poser le double-toit par-dessus",
+                wrong: ["Creuser une rigole", "Ajouter plus de sardines", "Tester la solidité"],
+                time: 5
+            },
+            {
+                question: "✅ Presque fini ! Dernière étape ?",
+                correct: "Installer le tapis et vérifier tout",
+                wrong: ["Démonter pour s'entraîner", "Ajouter des décorations", "Faire le ménage autour"],
+                time: 3
+            }
+        ];
+
+        function lancerModeFlappy() {
+            document.getElementById('fin-jeu').classList.remove('active');
+            document.getElementById('flappy-mode').classList.add('active');
+            
+            // Initialiser le jeu avancé
+            initAdvancedGame();
         }
+
+        function initAdvancedGame() {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            bird = document.getElementById('bird');
+            scoreElement = document.getElementById('score');
+            questionText = document.getElementById('questionText');
+            gameOverDiv = document.getElementById('gameOver');
+            successDiv = document.getElementById('success');
+            pausedDiv = document.getElementById('paused');
+
+            // Configuration du canvas
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+
+            // Variables du jeu
+            birdY = canvas.height / 2;
+            birdVelocity = 0;
+            gravity = 0.4;
+            jumpStrength = -7;
+            gameRunning = true;
+            gamePaused = false;
+            currentStep = 0;
+            pipes = [];
+            gameSpeed = 1.5;
+            pipeWidth = 80;
+            gapHeight = 250;
+            choiceButtons = [];
+            gameTimer = 0;
+            stepTimer = 0;
+            difficultyLevel = 1;
+
+            // Position initiale de l'oiseau
+            bird.style.left = '100px';
+            updateBirdPosition();
+
+            // Créer les nuages
+            createClouds();
+
+            // Initialiser les tuyaux
+            initPipes();
+
+            // Démarrer le jeu
+            gameLoop();
+        }
+
+        function createClouds() {
+            const gameContainer = document.querySelector('#flappy-mode .game-container');
+            for (let i = 0; i < 3; i++) {
+                const cloud = document.createElement('div');
+                cloud.style.position = 'absolute';
+                cloud.style.width = '100px';
+                cloud.style.height = '40px';
+                cloud.style.background = 'white';
+                cloud.style.borderRadius = '40px';
+                cloud.style.opacity = '0.7';
+                cloud.style.animation = 'float 20s infinite linear';
+                cloud.style.top = Math.random() * 200 + 50 + 'px';
+                cloud.style.animationDelay = Math.random() * 20 + 's';
+                gameContainer.appendChild(cloud);
+            }
+        }
+
+        function shuffle(array) {
+            const shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+
+        function createChoiceButtons(pipeX, gapY, questionIndex) {
+            const question = tentQuestions[questionIndex];
+            const allChoices = [question.correct, ...question.wrong];
+            const shuffledChoices = shuffle(allChoices);
+
+            shuffledChoices.forEach((choice, index) => {
+                const button = document.createElement('div');
+                button.style.position = 'absolute';
+                button.style.background = '#3498DB';
+                button.style.color = 'white';
+                button.style.border = '3px solid #2980B9';
+                button.style.borderRadius = '15px';
+                button.style.padding = '10px 15px';
+                button.style.fontWeight = 'bold';
+                button.style.fontSize = '12px';
+                button.style.cursor = 'pointer';
+                button.style.transition = 'all 0.3s';
+                button.style.zIndex = '15';
+                button.style.textAlign = 'center';
+                button.style.minWidth = '120px';
+                button.style.animation = 'bounce 2s infinite';
+                button.textContent = choice;
+                button.style.left = (pipeX - 60) + 'px';
+                button.style.top = (gapY + 30 + index * 50) + 'px';
+                button.style.animationDelay = (index * 0.2) + 's';
+                
+                button.onclick = () => handleChoice(choice, question.correct, button);
+                
+                document.querySelector('#flappy-mode .game-container').appendChild(button);
+                choiceButtons.push(button);
+            });
+        }
+
+        function handleChoice(selectedChoice, correctChoice, buttonElement) {
+            if (!gamePaused) return;
+
+            // Annuler le timeout
+            if (questionTimeout) {
+                clearTimeout(questionTimeout);
+                questionTimeout = null;
+            }
+
+            // Désactiver tous les boutons
+            choiceButtons.forEach(btn => {
+                btn.style.pointerEvents = 'none';
+                if (btn.textContent === correctChoice) {
+                    btn.style.background = '#27AE60';
+                    btn.style.borderColor = '#229954';
+                } else if (btn !== buttonElement) {
+                    btn.style.opacity = '0.5';
+                }
+            });
+
+            if (selectedChoice === correctChoice) {
+                buttonElement.style.background = '#27AE60';
+                buttonElement.style.borderColor = '#229954';
+                setTimeout(() => {
+                    // Bonne réponse - continuer
+                    gamePaused = false;
+                    pausedDiv.style.display = 'none';
+                    clearChoiceButtons();
+                    
+                    // Marquer le tuyau comme passé
+                    const currentPipe = pipes.find(p => p.step === currentStep);
+                    if (currentPipe) {
+                        currentPipe.passed = true;
+                        currentStep++;
+                        stepTimer = 0; // Reset timer pour la prochaine étape
+                        
+                        // Augmenter la difficulté progressivement
+                        if (currentStep > 2) {
+                            gameSpeed += 0.3;
+                            gravity += 0.05;
+                            gapHeight -= 10;
+                            difficultyLevel++;
+                            
+                            const levels = ["Débutant", "Intermédiaire", "Avancé", "Expert", "Maître Scout"];
+                            document.getElementById('difficulty').textContent = levels[Math.min(difficultyLevel-1, 4)];
+                        }
+                        
+                        scoreElement.textContent = currentStep + 1;
+                        
+                        if (currentStep >= tentQuestions.length) {
+                            gameRunning = false;
+                            successDiv.style.display = 'block';
+                        } else {
+                            questionText.textContent = tentQuestions[currentStep].question;
+                            document.getElementById('timeLimit').textContent = tentQuestions[currentStep].time;
+                        }
+                    }
+                }, 1500);
+            } else {
+                buttonElement.style.background = '#E74C3C';
+                buttonElement.style.borderColor = '#C0392B';
+                setTimeout(() => {
+                    // Mauvaise réponse - game over
+                    gameRunning = false;
+                    gamePaused = false;
+                    gameOverDiv.style.display = 'block';
+                    clearChoiceButtons();
+                }, 1500);
+            }
+        }
+
+        function clearChoiceButtons() {
+            choiceButtons.forEach(button => {
+                button.remove();
+            });
+            choiceButtons = [];
+        }
+
+        function initPipes() {
+            pipes = [];
+            for (let i = 0; i < tentQuestions.length; i++) {
+                const pipeX = 400 + i * 350;
+                const gapY = 150 + Math.random() * (canvas.height - 400);
+                
+                pipes.push({
+                    x: pipeX,
+                    gapY: gapY,
+                    passed: false,
+                    step: i,
+                    choicesCreated: false
+                });
+            }
+        }
+
+        function updateBirdPosition() {
+            bird.style.top = birdY + 'px';
+            
+            const rotation = Math.max(-30, Math.min(30, birdVelocity * 3));
+            bird.style.transform = `rotate(${rotation}deg)`;
+        }
+
+        function jump() {
+            if (gameRunning && !gamePaused) {
+                birdVelocity = jumpStrength;
+            }
+        }
+
+        function checkCollisions() {
+            const birdRect = {
+                x: 110, // Plus de marge
+                y: birdY + 10, // Plus de marge en haut
+                width: 40, // Zone de collision plus petite
+                height: 40 // Zone de collision plus petite
+            };
+
+            // Marge plus généreuse pour les bords
+            if (birdY < -20 || birdY > canvas.height - 40) {
+                return true;
+            }
+
+            for (let pipe of pipes) {
+                if (birdRect.x < pipe.x + pipeWidth && birdRect.x + birdRect.width > pipe.x) {
+                    // Marge de 15px pour les tuyaux
+                    if (birdRect.y < pipe.gapY + 15 || birdRect.y + birdRect.height > pipe.gapY + gapHeight - 15) {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            pipes.forEach((pipe, index) => {
+                // Tuyau du haut
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(pipe.x, 0, pipeWidth, pipe.gapY);
+                
+                // Tuyau du bas
+                ctx.fillRect(pipe.x, pipe.gapY + gapHeight, pipeWidth, canvas.height - pipe.gapY - gapHeight);
+
+                // Bordures
+                ctx.strokeStyle = '#654321';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(pipe.x, 0, pipeWidth, pipe.gapY);
+                ctx.strokeRect(pipe.x, pipe.gapY + gapHeight, pipeWidth, canvas.height - pipe.gapY - gapHeight);
+
+                // Numéro de l'étape
+                const labelY = pipe.gapY + gapHeight / 2;
+                ctx.fillStyle = '#E74C3C';
+                ctx.fillRect(pipe.x - 10, labelY - 20, pipeWidth + 20, 40);
+                
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 16px Comic Sans MS';
+                ctx.textAlign = 'center';
+                ctx.fillText(`Étape ${index + 1}`, pipe.x + pipeWidth / 2, labelY + 5);
+            });
+        }
+
+        function update() {
+            if (!gameRunning) return;
+
+            // Mettre à jour les chronomètres
+            gameTimer += 1/60; // 60 FPS
+            stepTimer += 1/60;
+            
+            document.getElementById('gameTimer').textContent = Math.floor(gameTimer);
+            document.getElementById('stepTimer').textContent = Math.floor(stepTimer);
+
+            if (!gamePaused) {
+                // Physique de l'oiseau
+                birdVelocity += gravity;
+                birdY += birdVelocity;
+
+                // Déplacer les tuyaux
+                pipes.forEach(pipe => {
+                    pipe.x -= gameSpeed;
+
+                    // Créer les choix quand l'oiseau approche
+                    if (!pipe.choicesCreated && pipe.x < 300 && pipe.step === currentStep) {
+                        pipe.choicesCreated = true;
+                        gamePaused = true;
+                        pausedDiv.style.display = 'block';
+                        createChoiceButtons(pipe.x, pipe.gapY, pipe.step);
+                        
+                        // Timeout automatique après 30 secondes
+                        questionTimeout = setTimeout(() => {
+                            if (gamePaused) {
+                                skipQuestion();
+                            }
+                        }, 30000);
+                    }
+                });
+
+                // Vérifier les collisions
+                if (checkCollisions()) {
+                    gameRunning = false;
+                    gameOverDiv.style.display = 'block';
+                }
+            }
+
+            updateBirdPosition();
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            if (gameRunning) {
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        function restartGame() {
+            // Annuler tous les timeouts
+            if (questionTimeout) {
+                clearTimeout(questionTimeout);
+                questionTimeout = null;
+            }
+            
+            gameRunning = true;
+            gamePaused = false;
+            birdY = canvas.height / 2;
+            birdVelocity = 0;
+            currentStep = 0;
+            gameTimer = 0;
+            stepTimer = 0;
+            difficultyLevel = 1;
+            gameSpeed = 1.5;
+            gravity = 0.4;
+            gapHeight = 250;
+            
+            scoreElement.textContent = '1';
+            questionText.textContent = tentQuestions[0].question;
+            document.getElementById('timeLimit').textContent = tentQuestions[0].time;
+            document.getElementById('difficulty').textContent = 'Débutant';
+            document.getElementById('gameTimer').textContent = '0';
+            document.getElementById('stepTimer').textContent = '0';
+            
+            gameOverDiv.style.display = 'none';
+            successDiv.style.display = 'none';
+            pausedDiv.style.display = 'none';
+            clearChoiceButtons();
+            initPipes();
+            gameLoop();
+        }
+
+        function retourAuJeuPrincipal() {
+            document.getElementById('flappy-mode').classList.remove('active');
+            document.getElementById('fin-jeu').classList.add('active');
+            if (gameRunning) {
+                gameRunning = false;
+            }
+        }
+
+        function skipQuestion() {
+            if (gamePaused) {
+                // Annuler le timeout
+                if (questionTimeout) {
+                    clearTimeout(questionTimeout);
+                    questionTimeout = null;
+                }
+                
+                // Reprendre le jeu sans répondre à la question
+                gamePaused = false;
+                pausedDiv.style.display = 'none';
+                clearChoiceButtons();
+                
+                // Marquer le tuyau comme passé même sans réponse
+                const currentPipe = pipes.find(p => p.step === currentStep);
+                if (currentPipe) {
+                    currentPipe.passed = true;
+                    currentStep++;
+                    stepTimer = 0;
+                    
+                    // Augmenter la difficulté progressivement
+                    if (currentStep > 2) {
+                        gameSpeed += 0.3;
+                        gravity += 0.05;
+                        gapHeight -= 10;
+                        difficultyLevel++;
+                        
+                        const levels = ["Débutant", "Intermédiaire", "Avancé", "Expert", "Maître Scout"];
+                        document.getElementById('difficulty').textContent = levels[Math.min(difficultyLevel-1, 4)];
+                    }
+                    
+                    scoreElement.textContent = currentStep + 1;
+                    
+                    if (currentStep >= tentQuestions.length) {
+                        gameRunning = false;
+                        successDiv.style.display = 'block';
+                    } else {
+                        questionText.textContent = tentQuestions[currentStep].question;
+                        document.getElementById('timeLimit').textContent = tentQuestions[currentStep].time;
+                    }
+                }
+            }
+        }
+
+        function goBackStep() {
+            if (currentStep > 0) {
+                // Retourner à l'étape précédente
+                currentStep--;
+                stepTimer = 0;
+                
+                // Réinitialiser la difficulté si nécessaire
+                if (currentStep <= 2) {
+                    gameSpeed = 1.5;
+                    gravity = 0.4;
+                    gapHeight = 250;
+                    difficultyLevel = 1;
+                    document.getElementById('difficulty').textContent = 'Débutant';
+                }
+                
+                scoreElement.textContent = currentStep + 1;
+                questionText.textContent = tentQuestions[currentStep].question;
+                document.getElementById('timeLimit').textContent = tentQuestions[currentStep].time;
+                
+                // Repositionner l'oiseau au centre
+                birdY = canvas.height / 2;
+                birdVelocity = 0;
+                updateBirdPosition();
+                
+                // Réinitialiser les tuyaux
+                initPipes();
+                
+                // S'assurer que le jeu n'est pas en pause
+                gamePaused = false;
+                pausedDiv.style.display = 'none';
+                clearChoiceButtons();
+            }
+        }
+
+        // Contrôles pour le jeu avancé
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                jump();
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('choice-button') && !e.target.classList.contains('restart-btn') && !e.target.classList.contains('btn')) {
+                jump();
+            }
+        });
+
+        // Redimensionnement
+        window.addEventListener('resize', () => {
+            if (canvas) {
+                canvas.width = canvas.offsetWidth;
+                canvas.height = canvas.offsetHeight;
+            }
+        });
 
         window.addEventListener('load', initJeu);
     </script>

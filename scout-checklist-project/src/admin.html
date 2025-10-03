@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>👑 Admin - Carnet Scout</title>
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <div class="fey-container">
+        <nav class="fey-nav">
+            <button class="fey-tab" onclick="navigateTo('index')">🏠 Accueil</button>
+            <button class="fey-tab" onclick="navigateTo('liste')">📋 Ma Liste</button>
+            <button class="fey-tab" onclick="navigateTo('calendrier')">📅 Calendrier</button>
+            <button class="fey-tab active">👑 Admin</button>
+            <button class="fey-tab" onclick="navigateTo('registre')">📊 Registre</button>
+            <button class="fey-tab" onclick="navigateTo('covoiturage')">🚗 Covoiturage</button>
+        </nav>
+
+        <h1 class="fey-title">👑 Administration</h1>
+        <p class="fey-subtitle">Gérez les sorties, équipes et paramètres</p>
+
+        <!-- Gestion des Sorties -->
+        <div class="fey-card">
+            <div class="fey-card-header">🎯 Gestion des Sorties</div>
+            <div class="admin-section">
+                <div class="admin-controls">
+                    <button class="fey-btn" onclick="addNewTrip()">➕ Nouvelle Sortie</button>
+                    <button class="fey-btn" onclick="refreshTrips()">🔄 Actualiser</button>
+                </div>
+                <div class="trips-list" id="calendarTripsList">
+                    <!-- Les sorties seront chargées ici -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Gestion des Sorties Covoiturage -->
+        <div class="fey-card">
+            <div class="fey-card-header">🚗 Gestion des Sorties Covoiturage</div>
+            <div class="admin-section">
+                <div class="admin-controls">
+                    <button class="fey-btn" onclick="addNewCarpoolTrip()">➕ Nouvelle Sortie Covoiturage</button>
+                    <button class="fey-btn" onclick="refreshCarpoolTrips()">🔄 Actualiser</button>
+                </div>
+                <div class="trips-list" id="carpoolTripsList">
+                    <!-- Les sorties covoiturage seront chargées ici -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Gestion des Équipes -->
+        <div class="fey-card">
+            <div class="fey-card-header">👥 Gestion des Équipes</div>
+            <div class="admin-section">
+                <div class="admin-controls">
+                    <button class="fey-btn" onclick="showTeamEditor()">✏️ Éditer les Équipes</button>
+                    <button class="fey-btn" onclick="resetTeamsToDefault()">🔄 Réinitialiser</button>
+                    <button class="fey-btn" onclick="exportTeams()">📤 Exporter</button>
+                    <button class="fey-btn" onclick="document.getElementById('importFile').click()">📥 Importer</button>
+                    <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importTeams(this.files[0])">
+                </div>
+                
+                <!-- Aperçu des équipes actuelles -->
+                <div class="team-preview" id="teamPreview">
+                    <!-- Les équipes seront chargées ici -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal d'édition des équipes -->
+        <div id="teamEditorModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>✏️ Éditeur d'Équipes</h2>
+                    <button class="close-btn" onclick="closeTeamEditor()">✕</button>
+                </div>
+                <div class="modal-body">
+                    <div class="tabs">
+                        <button class="tab-btn active" onclick="switchTeamTab('vie')">🏕️ Équipes de Vie</button>
+                        <button class="tab-btn" onclick="switchTeamTab('nuit')">🌙 Équipes de Nuit</button>
+                    </div>
+                    
+                    <div id="vieTeamsTab" class="tab-content active">
+                        <div class="team-editor-section">
+                            <div class="section-header">
+                                <h3>🏕️ Équipes de Vie</h3>
+                                <button class="fey-btn-small" onclick="addLifeTeam()">➕ Ajouter</button>
+                            </div>
+                            <div id="vieTeamsEditor" class="teams-editor">
+                                <!-- Éditeurs d'équipes de vie -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="nuitTeamsTab" class="tab-content">
+                        <div class="team-editor-section">
+                            <div class="section-header">
+                                <h3>🌙 Équipes de Nuit</h3>
+                                <button class="fey-btn-small" onclick="addNightTeam()">➕ Ajouter</button>
+                            </div>
+                            <div id="nuitTeamsEditor" class="teams-editor">
+                                <!-- Éditeurs d'équipes de nuit -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="fey-btn" onclick="saveTeamChanges()">💾 Sauvegarder</button>
+                    <button class="fey-btn" onclick="closeTeamEditor()">❌ Annuler</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Paramètres -->
+        <div class="fey-card">
+            <div class="fey-card-header">⚙️ Paramètres</div>
+            <div class="admin-section">
+                <div class="settings-grid">
+                    <div class="setting-item">
+                        <label class="setting-label">Nom du groupe :</label>
+                        <input type="text" id="groupName" class="fey-input" placeholder="Nom du groupe scout">
+                    </div>
+                    <div class="setting-item">
+                        <label class="setting-label">Responsable :</label>
+                        <input type="text" id="leaderName" class="fey-input" placeholder="Nom du responsable">
+                    </div>
+                    <div class="setting-item">
+                        <label class="setting-label">Téléphone :</label>
+                        <input type="tel" id="leaderPhone" class="fey-input" placeholder="Numéro de téléphone">
+                    </div>
+                </div>
+                <div class="admin-controls">
+                    <button class="fey-btn" onclick="saveSettings()">💾 Sauvegarder</button>
+                    <button class="fey-btn" onclick="resetSettings()">🔄 Réinitialiser</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/common.js"></script>
+    <script src="js/equipes.js"></script>
+    <script>
+        // Navigation
+        function navigateTo(page) {
+            if (page === 'index') {
+                window.location.href = 'index.html';
+            } else {
+                window.location.href = page + '.html';
+            }
+        }
+
+        // Données des sorties
+        const defaultTrips = [
+            {
+                id: 1,
+                title: "Sortie en forêt",
+                date: "2024-12-15",
+                description: "Randonnée et observation de la nature",
+                location: "Forêt de Compiègne",
+                carpool: false
+            },
+            {
+                id: 2,
+                title: "Réunion d'équipe",
+                date: "2024-12-20",
+                description: "Préparation du camp d'hiver",
+                location: "Local scout",
+                carpool: false
+            },
+            {
+                id: 3,
+                title: "Camp d'hiver",
+                date: "2024-12-28",
+                description: "Camp de 3 jours en montagne",
+                location: "Alpes",
+                carpool: true
+            }
+        ];
+
+        // Charger les sorties depuis localStorage
+        function loadTrips() {
+            const saved = localStorage.getItem('admin-outings');
+            if (saved) {
+                return JSON.parse(saved);
+            }
+            return defaultTrips;
+        }
+
+        // Sauvegarder les sorties
+        function saveTrips(trips) {
+            localStorage.setItem('admin-outings', JSON.stringify(trips));
+        }
+
+        // Charger les sorties covoiturage
+        function loadCarpoolTrips() {
+            const saved = localStorage.getItem('carpool-trips');
+            return saved ? JSON.parse(saved) : [];
+        }
+
+        // Sauvegarder les sorties covoiturage
+        function saveCarpoolTrips(trips) {
+            localStorage.setItem('carpool-trips', JSON.stringify(trips));
+        }
+
+        // Afficher les sorties
+        function displayTrips() {
+            const trips = loadTrips();
+            const container = document.getElementById('calendarTripsList');
+            
+            if (trips.length === 0) {
+                container.innerHTML = '<div class="fey-note">Aucune sortie enregistrée.</div>';
+                return;
+            }
+
+            const html = trips.map(trip => `
+                <div class="trip-item">
+                    <div class="trip-info">
+                        <div class="trip-title">${trip.title}</div>
+                        <div class="trip-date">📅 ${new Date(trip.date).toLocaleDateString('fr-FR')}</div>
+                        <div class="trip-location">📍 ${trip.location}</div>
+                        <div class="trip-description">${trip.description}</div>
+                    </div>
+                    <div class="trip-actions">
+                        <label class="carpool-toggle">
+                            <input type="checkbox" ${trip.carpool ? 'checked' : ''} 
+                                   onchange="toggleCarpool(${trip.id})">
+                            <span>🚗 Covoiturage</span>
+                        </label>
+                        <button class="fey-btn-small" onclick="editTrip(${trip.id})">✏️</button>
+                        <button class="fey-btn-small danger" onclick="deleteTrip(${trip.id})">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = html;
+        }
+
+        // Afficher les sorties covoiturage
+        function displayCarpoolTrips() {
+            const trips = loadCarpoolTrips();
+            const container = document.getElementById('carpoolTripsList');
+            
+            if (trips.length === 0) {
+                container.innerHTML = '<div class="fey-note">Aucune sortie covoiturage enregistrée.</div>';
+                return;
+            }
+
+            const html = trips.map(trip => `
+                <div class="trip-item">
+                    <div class="trip-info">
+                        <div class="trip-title">${trip.title}</div>
+                        <div class="trip-date">📅 ${new Date(trip.date).toLocaleDateString('fr-FR')}</div>
+                        <div class="trip-location">📍 ${trip.location}</div>
+                        <div class="trip-description">${trip.description}</div>
+                    </div>
+                    <div class="trip-actions">
+                        <button class="fey-btn-small" onclick="editCarpoolTrip(${trip.id})">✏️</button>
+                        <button class="fey-btn-small danger" onclick="deleteCarpoolTrip(${trip.id})">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = html;
+        }
+
+        // Basculer le covoiturage
+        function toggleCarpool(tripId) {
+            const trips = loadTrips();
+            const trip = trips.find(t => t.id === tripId);
+            if (trip) {
+                trip.carpool = !trip.carpool;
+                saveTrips(trips);
+                
+                if (trip.carpool) {
+                    // Ajouter à la liste covoiturage
+                    const carpoolTrips = loadCarpoolTrips();
+                    carpoolTrips.push(trip);
+                    saveCarpoolTrips(carpoolTrips);
+                } else {
+                    // Retirer de la liste covoiturage
+                    const carpoolTrips = loadCarpoolTrips();
+                    const filtered = carpoolTrips.filter(t => t.id !== tripId);
+                    saveCarpoolTrips(filtered);
+                }
+                
+                displayTrips();
+                displayCarpoolTrips();
+            }
+        }
+
+        // Ajouter une nouvelle sortie
+        function addNewTrip() {
+            const title = prompt('Titre de la sortie :');
+            if (!title) return;
+            
+            const date = prompt('Date (YYYY-MM-DD) :');
+            if (!date) return;
+            
+            const location = prompt('Lieu :');
+            const description = prompt('Description :');
+            
+            const trips = loadTrips();
+            const newTrip = {
+                id: Date.now(),
+                title,
+                date,
+                location: location || '',
+                description: description || '',
+                carpool: false
+            };
+            
+            trips.push(newTrip);
+            saveTrips(trips);
+            displayTrips();
+        }
+
+        // Ajouter une nouvelle sortie covoiturage
+        function addNewCarpoolTrip() {
+            const title = prompt('Titre de la sortie :');
+            if (!title) return;
+            
+            const date = prompt('Date (YYYY-MM-DD) :');
+            if (!date) return;
+            
+            const location = prompt('Lieu :');
+            const description = prompt('Description :');
+            
+            const trips = loadCarpoolTrips();
+            const newTrip = {
+                id: Date.now(),
+                title,
+                date,
+                location: location || '',
+                description: description || '',
+                carpool: true
+            };
+            
+            trips.push(newTrip);
+            saveCarpoolTrips(trips);
+            displayCarpoolTrips();
+        }
+
+        // Actualiser les sorties
+        function refreshTrips() {
+            displayTrips();
+        }
+
+        // Actualiser les sorties covoiturage
+        function refreshCarpoolTrips() {
+            displayCarpoolTrips();
+        }
+
+        // Charger les paramètres
+        function loadSettings() {
+            const settings = JSON.parse(localStorage.getItem('admin-settings') || '{}');
+            document.getElementById('groupName').value = settings.groupName || '';
+            document.getElementById('leaderName').value = settings.leaderName || '';
+            document.getElementById('leaderPhone').value = settings.leaderPhone || '';
+        }
+
+        // Sauvegarder les paramètres
+        function saveSettings() {
+            const settings = {
+                groupName: document.getElementById('groupName').value,
+                leaderName: document.getElementById('leaderName').value,
+                leaderPhone: document.getElementById('leaderPhone').value
+            };
+            localStorage.setItem('admin-settings', JSON.stringify(settings));
+            alert('Paramètres sauvegardés !');
+        }
+
+        // Réinitialiser les paramètres
+        function resetSettings() {
+            if (confirm('Êtes-vous sûr de vouloir réinitialiser tous les paramètres ?')) {
+                localStorage.removeItem('admin-settings');
+                loadSettings();
+            }
+        }
+
+        // === GESTION DES ÉQUIPES ===
+        
+        // Afficher l'aperçu des équipes
+        function displayTeamsPreview() {
+            const container = document.getElementById('teamPreview');
+            const vieTeams = getLifeTeams();
+            const nuitTeams = getNightTeams();
+            
+            let html = '<div class="teams-preview-grid">';
+            
+            // Équipes de vie
+            html += '<div class="preview-section">';
+            html += '<h4>🏕️ Équipes de Vie</h4>';
+            html += '<div class="preview-teams">';
+            Object.values(vieTeams).forEach(team => {
+                html += `<div class="preview-team" style="background: ${team.color}; color: white; padding: 0.5rem; border-radius: 8px; margin-bottom: 0.5rem;">
+                    <strong>${team.name}</strong><br>
+                    <small>${team.members.length} membres: ${team.members.join(', ')}</small>
+                </div>`;
+            });
+            html += '</div></div>';
+            
+            // Équipes de nuit
+            html += '<div class="preview-section">';
+            html += '<h4>🌙 Équipes de Nuit</h4>';
+            html += '<div class="preview-teams">';
+            Object.values(nuitTeams).forEach(team => {
+                html += `<div class="preview-team" style="background: ${team.color}; color: white; padding: 0.5rem; border-radius: 8px; margin-bottom: 0.5rem;">
+                    <strong>${team.name}</strong><br>
+                    <small>${team.members.length} membres: ${team.members.join(', ')}</small>
+                </div>`;
+            });
+            html += '</div></div>';
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
+        
+        // Ouvrir l'éditeur d'équipes
+        function showTeamEditor() {
+            document.getElementById('teamEditorModal').style.display = 'flex';
+            loadTeamsEditor();
+        }
+        
+        // Fermer l'éditeur d'équipes
+        function closeTeamEditor() {
+            document.getElementById('teamEditorModal').style.display = 'none';
+        }
+        
+        // Basculer entre les onglets d'équipes
+        function switchTeamTab(tabType) {
+            // Désactiver tous les onglets
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Activer l'onglet sélectionné
+            event.target.classList.add('active');
+            document.getElementById(tabType + 'TeamsTab').classList.add('active');
+        }
+        
+        // Charger l'éditeur d'équipes
+        function loadTeamsEditor() {
+            loadVieTeamsEditor();
+            loadNuitTeamsEditor();
+        }
+        
+        // Charger l'éditeur des équipes de vie
+        function loadVieTeamsEditor() {
+            const container = document.getElementById('vieTeamsEditor');
+            const vieTeams = getLifeTeams();
+            
+            let html = '';
+            Object.entries(vieTeams).forEach(([teamId, team]) => {
+                html += createTeamEditor(teamId, team, 'vie');
+            });
+            container.innerHTML = html;
+        }
+        
+        // Charger l'éditeur des équipes de nuit
+        function loadNuitTeamsEditor() {
+            const container = document.getElementById('nuitTeamsEditor');
+            const nuitTeams = getNightTeams();
+            
+            let html = '';
+            Object.entries(nuitTeams).forEach(([teamId, team]) => {
+                html += createTeamEditor(teamId, team, 'nuit');
+            });
+            container.innerHTML = html;
+        }
+        
+        // Créer un éditeur d'équipe
+        function createTeamEditor(teamId, team, type) {
+            return `
+                <div class="team-editor-item">
+                    <div class="team-editor-header">
+                        <input type="text" value="${team.name}" onchange="updateTeamName('${teamId}', '${type}', this.value)" class="team-name-input">
+                        <input type="color" value="#${team.color.match(/rgb\((\d+), (\d+), (\d+)\)/)?.[1]?.toString(16) || 'ff6b35'}" onchange="updateTeamColor('${teamId}', '${type}', this.value)" class="team-color-input">
+                        <button class="fey-btn-small danger" onclick="deleteTeam('${teamId}', '${type}')">🗑️</button>
+                    </div>
+                    <div class="team-members-editor">
+                        <label>Membres (un par ligne):</label>
+                        <textarea rows="6" onchange="updateTeamMembers('${teamId}', '${type}', this.value)">${team.members.join('\n')}</textarea>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Mettre à jour le nom d'une équipe
+        function updateTeamName(teamId, type, newName) {
+            const teams = loadTeams();
+            if (teams[type] && teams[type][teamId]) {
+                teams[type][teamId].name = newName;
+                saveTeams(teams);
+            }
+        }
+        
+        // Mettre à jour la couleur d'une équipe
+        function updateTeamColor(teamId, type, newColor) {
+            const teams = loadTeams();
+            if (teams[type] && teams[type][teamId]) {
+                const rgb = hexToRgb(newColor);
+                teams[type][teamId].color = `linear-gradient(135deg, rgb(${rgb.r}, ${rgb.g}, ${rgb.b}), rgb(${Math.max(0, rgb.r-30)}, ${Math.max(0, rgb.g-30)}, ${Math.max(0, rgb.b-30)}))`;
+                saveTeams(teams);
+            }
+        }
+        
+        // Mettre à jour les membres d'une équipe
+        function updateTeamMembers(teamId, type, membersText) {
+            const teams = loadTeams();
+            if (teams[type] && teams[type][teamId]) {
+                const members = membersText.split('\n').filter(m => m.trim() !== '');
+                teams[type][teamId].members = members;
+                saveTeams(teams);
+            }
+        }
+        
+        // Supprimer une équipe
+        function deleteTeam(teamId, type) {
+            if (confirm('Êtes-vous sûr de vouloir supprimer cette équipe ?')) {
+                if (type === 'vie') {
+                    deleteLifeTeam(teamId);
+                } else {
+                    deleteNightTeam(teamId);
+                }
+                loadTeamsEditor();
+                displayTeamsPreview();
+            }
+        }
+        
+        // Ajouter une nouvelle équipe de vie
+        function addLifeTeam() {
+            const name = prompt('Nom de la nouvelle équipe de vie :');
+            if (name) {
+                const teamId = createLifeTeam(name, 'linear-gradient(135deg, #ff6b35, #f7931e)', []);
+                loadVieTeamsEditor();
+                displayTeamsPreview();
+            }
+        }
+        
+        // Ajouter une nouvelle équipe de nuit
+        function addNightTeam() {
+            const name = prompt('Nom de la nouvelle équipe de nuit :');
+            if (name) {
+                const teamId = createNightTeam(name, 'linear-gradient(135deg, #2d3436, #636e72)', []);
+                loadNuitTeamsEditor();
+                displayTeamsPreview();
+            }
+        }
+        
+        // Sauvegarder les changements d'équipes
+        function saveTeamChanges() {
+            alert('Équipes sauvegardées !');
+            displayTeamsPreview();
+            closeTeamEditor();
+        }
+        
+        // Convertir hex en RGB
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : null;
+        }
+
+        // Initialisation
+        function init() {
+            displayTrips();
+            displayCarpoolTrips();
+            loadSettings();
+            displayTeamsPreview();
+        }
+
+        // Démarrer
+        window.addEventListener('load', init);
+    </script>
+
+    <style>
+        .admin-section {
+            margin: 1rem 0;
+        }
+
+        .admin-controls {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .trips-list {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .trip-item {
+            background: white;
+            border-radius: var(--r-sm);
+            padding: 1rem;
+            border: 2px solid var(--c-ink-900);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .trip-info {
+            flex: 1;
+        }
+
+        .trip-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--c-ink-900);
+            margin-bottom: 0.5rem;
+        }
+
+        .trip-date, .trip-location {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .trip-description {
+            color: var(--c-ink-900);
+            font-size: 0.9rem;
+        }
+
+        .trip-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .carpool-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+
+        .carpool-toggle input {
+            transform: scale(1.2);
+        }
+
+        .fey-btn-small {
+            padding: 0.5rem;
+            font-size: 0.9rem;
+            border-radius: var(--r-sm);
+            border: 2px solid var(--c-ink-900);
+            background: white;
+            color: var(--c-ink-900);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .fey-btn-small:hover {
+            background: var(--c-ink-900);
+            color: white;
+        }
+
+        .fey-btn-small.danger {
+            border-color: #f44336;
+            color: #f44336;
+        }
+
+        .fey-btn-small.danger:hover {
+            background: #f44336;
+            color: white;
+        }
+
+        .settings-grid {
+            display: grid;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .setting-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .setting-label {
+            font-weight: bold;
+            color: var(--c-ink-900);
+        }
+
+        .fey-input {
+            padding: 0.75rem;
+            border: 2px solid var(--c-ink-900);
+            border-radius: var(--r-sm);
+            font-size: 1rem;
+        }
+
+        .fey-input:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+
+        /* Styles pour la gestion des équipes */
+        .teams-preview-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 1rem;
+        }
+
+        .preview-section h4 {
+            margin-bottom: 1rem;
+            color: var(--c-ink-900);
+            border-bottom: 2px solid var(--c-ink-900);
+            padding-bottom: 0.5rem;
+        }
+
+        .preview-teams {
+            display: grid;
+            gap: 0.5rem;
+        }
+
+        .preview-team {
+            padding: 0.75rem;
+            border-radius: 8px;
+            border: 2px solid var(--c-ink-900);
+            box-shadow: 2px 2px 0 var(--c-ink-900);
+        }
+
+        /* Modal d'édition des équipes */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: var(--parchment);
+            border-radius: 24px;
+            padding: 2rem;
+            max-width: 1200px;
+            width: 95%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            border: 4px solid var(--wood);
+            position: relative;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--c-ink-900);
+            padding-bottom: 1rem;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            color: var(--c-ink-900);
+            font-family: 'Patrick Hand', cursive;
+        }
+
+        .close-btn {
+            background: #F44336;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .close-btn:hover {
+            background: #d32f2f;
+            transform: scale(1.1);
+        }
+
+        .modal-body {
+            margin-bottom: 2rem;
+        }
+
+        /* Onglets */
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--c-ink-900);
+        }
+
+        .tab-btn {
+            background: var(--c-wood-200);
+            border: 2px solid var(--c-ink-900);
+            border-bottom: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--r-md) var(--r-md) 0 0;
+            cursor: pointer;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.1rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            background: var(--c-orange-500);
+            color: white;
+        }
+
+        .tab-btn.active {
+            background: var(--c-orange-600);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 1rem 0;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Section d'édition des équipes */
+        .team-editor-section {
+            margin-bottom: 2rem;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--c-ink-900);
+        }
+
+        .section-header h3 {
+            margin: 0;
+            color: var(--c-ink-900);
+            font-family: 'Patrick Hand', cursive;
+        }
+
+        .teams-editor {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .team-editor-item {
+            background: white;
+            border: 2px solid var(--c-ink-900);
+            border-radius: var(--r-md);
+            padding: 1.5rem;
+            box-shadow: 4px 4px 0 var(--c-ink-900);
+        }
+
+        .team-editor-header {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .team-name-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 0.75rem;
+            border: 2px solid var(--c-ink-900);
+            border-radius: var(--r-sm);
+            font-size: 1rem;
+            font-weight: bold;
+        }
+
+        .team-color-input {
+            width: 60px;
+            height: 40px;
+            border: 2px solid var(--c-ink-900);
+            border-radius: var(--r-sm);
+            cursor: pointer;
+        }
+
+        .team-members-editor label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            color: var(--c-ink-900);
+        }
+
+        .team-members-editor textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--c-ink-900);
+            border-radius: var(--r-sm);
+            font-size: 0.9rem;
+            font-family: 'Nunito', sans-serif;
+            resize: vertical;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            padding-top: 1rem;
+            border-top: 2px solid var(--c-ink-900);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .teams-preview-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .modal-content {
+                width: 98%;
+                padding: 1rem;
+            }
+            
+            .team-editor-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .team-name-input {
+                min-width: auto;
+            }
+        }
+    </style>
+</body>
+</html>

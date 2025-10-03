@@ -89,17 +89,17 @@
         <p class="fey-subtitle">Prochaine sortie à Jambville · Octobre 2025</p>
 
         <nav class="fey-nav">
-            <button class="fey-tab active" onclick="window.showPage('liste')">📋 Ma Liste</button>
-            <button class="fey-tab" onclick="window.showPage('tente')">⛺ La Tente</button>
-            <button class="fey-tab" onclick="window.showPage('infos')">📱 Infos</button>
-            <button class="fey-tab" onclick="window.showPage('equipes')">👥 Équipes</button>
-            <button class="fey-tab" onclick="window.showPage('calendrier')">📅 Calendrier</button>
-            <button class="fey-tab" onclick="window.showPage('covoiturage')">🚗 Covoiturage</button>
-            <button class="fey-tab" onclick="window.showPage('chansons')">🎵 Chansons</button>
-            <button class="fey-tab" onclick="window.showPage('marin')">⚓ Marin</button>
-            <button class="fey-tab" onclick="window.showPage('loi')">📜 Loi Scout</button>
-            <button class="fey-tab" onclick="window.showPage('admin')" id="adminTab" style="display: none; background: #9C27B0; color: white;">⚙️ Admin</button>
-            <button class="fey-tab" onclick="window.showPage('registre')" id="registreTab" style="display: inline-block; background: #FF5722; color: white;">📋 Registre d'Appel</button>
+            <button class="fey-tab active" onclick="showPage('liste')">📋 Ma Liste</button>
+            <button class="fey-tab" onclick="showPage('tente')">⛺ La Tente</button>
+            <button class="fey-tab" onclick="showPage('infos')">📱 Infos</button>
+            <button class="fey-tab" onclick="showPage('equipes')">👥 Équipes</button>
+            <button class="fey-tab" onclick="showPage('calendrier')">📅 Calendrier</button>
+            <button class="fey-tab" onclick="showPage('covoiturage')">🚗 Covoiturage</button>
+            <button class="fey-tab" onclick="showPage('chansons')">🎵 Chansons</button>
+            <button class="fey-tab" onclick="showPage('marin')">⚓ Marin</button>
+            <button class="fey-tab" onclick="showPage('loi')">📜 Loi Scout</button>
+            <button class="fey-tab" onclick="showPage('admin')" id="adminTab" style="display: none; background: #9C27B0; color: white;">⚙️ Admin</button>
+            <button class="fey-tab" onclick="showPage('registre')" id="registreTab" style="display: inline-block; background: #FF5722; color: white;">📋 Registre d'Appel</button>
             <button class="fey-tab" onclick="logout()" style="background: #d32f2f; color: white;">🚪 Déconnexion</button>
         </nav>
 
@@ -535,15 +535,15 @@
             </div>
         </div>
 
-        <!-- Jeu de Sac Scout -->
+        <!-- Jeu de Sac Scout (déplacé après la liste) -->
         <div class="fey-card" style="background: linear-gradient(135deg, #E8F5E8, #C8E6C9); border-left: 6px solid #4CAF50; margin-bottom: 2rem;">
-            <div class="fey-card-header">🎒 Jeu de Préparation du Sac Scout</div>
+            <div class="fey-card-header">🎮 Jeu de Préparation du Sac</div>
             <div class="fey-note" style="background: transparent; border: none; margin: 0;">
-                <strong>🎯 Défi :</strong> Prépare ton sac en rangeant les objets dans les bonnes catégories !<br>
+                <strong>🎯 Défi :</strong> Prépare ton sac en glissant les objets dans le bon ordre !<br>
                 <strong>🏆 Objectif :</strong> Range tout avant le départ pour l'aventure !
             </div>
             <div style="text-align: center; margin-top: 1rem;">
-                <button class="fey-btn" onclick="ouvrirJeuSac()" style="background: #4CAF50; font-size: 1.1rem; padding: 1rem 2rem;">
+                <button class="fey-btn" onclick="startScoutBagGame()" style="background: #4CAF50; font-size: 1.1rem; padding: 1rem 2rem;">
                     🎒 Commencer le Jeu du Sac
                 </button>
             </div>
@@ -666,12 +666,9 @@
                     <strong>🎯 Prêt à mettre en pratique ?</strong><br>
                     Teste tes connaissances avec notre jeu interactif de montage de tente !
                 </div>
-                <div style="text-align: center; margin-top: 1.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                    <button class="fey-btn" onclick="ouvrirJeuTente()" style="font-size: 1.1rem; padding: 1rem 1.5rem;">
-                        🎮 Jeu de Tente 1 🎮
-                    </button>
-                    <button class="fey-btn" onclick="ouvrirJeuTente2()" style="font-size: 1.1rem; padding: 1rem 1.5rem;">
-                        🎮 Jeu de Tente 2 🎮
+                <div style="text-align: center; margin-top: 1.5rem;">
+                    <button class="fey-btn" onclick="ouvrirJeuTente()" style="font-size: 1.2rem; padding: 1rem 2rem;">
+                        🎮 Jouer au Jeu de Tente 🎮
                     </button>
                 </div>
                 <div class="fey-note" style="background: rgba(139, 90, 43, 0.1); border-left: 4px solid #8B5A2B; margin-top: 1rem;">
@@ -784,8 +781,44 @@
                 Pendant le week-end, tu feras partie d'une petite équipe. Ensemble, vous monterez votre tente, préparerez les repas et vivrez de super aventures !
             </div>
 
-            <div id="vieTeamsDisplay" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem;">
-                <!-- Les équipes de vie seront chargées dynamiquement -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem;">
+                <div style="background: linear-gradient(135deg, var(--c-orange-600), var(--c-gold-400)); color: white; padding: 1.5rem; border-radius: var(--r-md); border: 3px solid var(--c-ink-900); box-shadow: 4px 4px 0 var(--c-ink-900); transform: rotate(-1deg);">
+                    <h3 style="font-family: 'Patrick Hand', cursive; font-size: 1.5rem; margin-bottom: 1rem; border-bottom: 2px solid rgba(255, 255, 255, 0.3); padding-bottom: 0.5rem;">🦁 Les Lions</h3>
+                    <div style="padding: 0.5rem 0; font-size: 1rem;">• Oscar</div>
+                    <div style="padding: 0.5rem 0; font-size: 1rem;">• Jules R</div>
+                    <div style="padding: 0.5rem 0; font-size: 1rem;">• Dante</div>
+                    <div style="padding: 0.5rem 0; font-size: 1rem;">• Léopold</div>
+                    <div style="padding: 0.5rem 0; font-size: 1rem;">• Lev</div>
+                    <div style="padding: 0.5rem 0; font-size: 1rem;">• Alexia</div>
+                </div>
+
+                <div style="background: linear-gradient(135deg, var(--c-forest-700), var(--c-forest-500)); color: white; padding: 1.5rem; border-radius: var(--r-md); border: 3px solid var(--c-ink-900); box-shadow: 4px 4px 0 var(--c-ink-900); transform: rotate(1deg);">
+                    <h3 style="font-family: 'Patrick Hand', cursive; font-size: 1.5rem; margin-bottom: 1rem; border-bottom: 2px solid rgba(255, 255, 255, 0.3); padding-bottom: 0.5rem;">🦅 Les Aigles</h3>
+                    <div style="padding: 0.5rem 0; font-size: 1rem;">• Alfred</div>
+                    <div style="padding: 0.5rem 0; font-size: 1rem;">• Jules P</div>
+                    <div style="padding: 0.5rem 0; font-size: 1rem;">• Felix</div>
+                    <div style="padding: 0.5rem 0; font-size: 1rem;">• Gabriel</div>
+                    <div style="padding: 0.5rem 0; font-size: 1rem;">• Octave</div>
+                    <div style="padding: 0.5rem 0; font-size: 1rem;">• Constance</div>
+                </div>
+
+                <div style="background: linear-gradient(135deg, var(--c-marine-700), var(--c-marine-900)); color: white; padding: 1.5rem; border-radius: var(--r-md); border: 3px solid var(--c-ink-900); box-shadow: 4px 4px 0 var(--c-ink-900); transform: rotate(-1deg);">
+                    <h3 style="font-family: 'Patrick Hand', cursive; font-size: 1.5rem; margin-bottom: 1rem; border-bottom: 2px solid rgba(255, 255, 255, 0.3); padding-bottom: 0.5rem;">🐺 Les Loups</h3>
+                    <div style="padding: 0.5rem 0; font-size: 1rem;">• Romane</div>
+                    <div style="padding: 0.5rem 0; font-size: 1rem;">• Louison</div>
+                    <div style="padding: 0.5rem 0; font-size: 1rem;">• Madeleine</div>
+                    <div style="padding: 0.5rem 0; font-size: 1rem;">• Claire</div>
+                    <div style="padding: 0.5rem 0; font-size: 1rem;">• Léa Leal</div>
+                    <div style="padding: 0.5rem 0; font-size: 1rem;">• Jeanne</div>
+                </div>
+
+                <div style="background: linear-gradient(135deg, #fa709a, #fee140); color: white; padding: 1.5rem; border-radius: var(--r-md); border: 3px solid var(--c-ink-900); box-shadow: 4px 4px 0 var(--c-ink-900); transform: rotate(1deg);">
+                    <h3 style="font-family: 'Patrick Hand', cursive; font-size: 1.5rem; margin-bottom: 1rem; border-bottom: 2px solid rgba(255, 255, 255, 0.3); padding-bottom: 0.5rem;">🦊 Les Renards</h3>
+                    <div style="padding: 0.5rem 0; font-size: 1rem;">• Gabrielle Wargnier</div>
+                    <div style="padding: 0.5rem 0; font-size: 1rem;">• Léa F</div>
+                    <div style="padding: 0.5rem 0; font-size: 1rem;">• Sybille</div>
+                    <div style="padding: 0.5rem 0; font-size: 1rem;">• Ambre</div>
+                </div>
             </div>
 
             <div class="fey-note" style="margin-top: 2rem;">
@@ -803,8 +836,49 @@
                     Pendant la nuit, vous serez répartis en petites équipes pour dormir ensemble dans vos tentes. C'est l'occasion de partager des moments calmes et de créer des liens !
                 </div>
 
-                <div id="nuitTeamsDisplay" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-top: 1rem;">
-                    <!-- Les équipes de nuit seront chargées dynamiquement -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                    <div style="background: linear-gradient(135deg, #2d3436, #636e72); color: white; padding: 1rem; border-radius: var(--r-sm); border: 2px solid var(--c-ink-900); text-align: center;">
+                        <h4 style="font-family: 'Patrick Hand', cursive; margin-bottom: 0.5rem;">🌙 Équipe A</h4>
+                        <div style="font-size: 0.9rem; text-align: left; padding: 0.5rem;">
+                            • Oscar<br>
+                            • Jules R<br>
+                            • Dante<br>
+                            • Léopold<br>
+                            • Lev<br>
+                            • Alexia
+                        </div>
+                    </div>
+                    <div style="background: linear-gradient(135deg, #2d3436, #636e72); color: white; padding: 1rem; border-radius: var(--r-sm); border: 2px solid var(--c-ink-900); text-align: center;">
+                        <h4 style="font-family: 'Patrick Hand', cursive; margin-bottom: 0.5rem;">🌙 Équipe B</h4>
+                        <div style="font-size: 0.9rem; text-align: left; padding: 0.5rem;">
+                            • Alfred<br>
+                            • Jules P<br>
+                            • Felix<br>
+                            • Gabriel<br>
+                            • Octave<br>
+                            • Constance
+                        </div>
+                    </div>
+                    <div style="background: linear-gradient(135deg, #2d3436, #636e72); color: white; padding: 1rem; border-radius: var(--r-sm); border: 2px solid var(--c-ink-900); text-align: center;">
+                        <h4 style="font-family: 'Patrick Hand', cursive; margin-bottom: 0.5rem;">🌙 Équipe C</h4>
+                        <div style="font-size: 0.9rem; text-align: left; padding: 0.5rem;">
+                            • Romane<br>
+                            • Louison<br>
+                            • Madeleine<br>
+                            • Claire<br>
+                            • Léa Leal<br>
+                            • Jeanne
+                        </div>
+                    </div>
+                    <div style="background: linear-gradient(135deg, #2d3436, #636e72); color: white; padding: 1rem; border-radius: var(--r-sm); border: 2px solid var(--c-ink-900); text-align: center;">
+                        <h4 style="font-family: 'Patrick Hand', cursive; margin-bottom: 0.5rem;">🌙 Équipe D</h4>
+                        <div style="font-size: 0.9rem; text-align: left; padding: 0.5rem;">
+                            • Gabrielle Wargnier<br>
+                            • Léa F<br>
+                            • Sybille<br>
+                            • Ambre
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -878,7 +952,7 @@ Ambre</textarea>
                         </div>
                     </div>
                     <div style="margin-top: 1rem; display: flex; gap: 1rem;">
-                        <button onclick="saveTeamChangesFromEditor()" class="fey-btn" style="background: #4CAF50;">💾 Sauvegarder</button>
+                        <button onclick="saveTeamChanges()" class="fey-btn" style="background: #4CAF50;">💾 Sauvegarder</button>
                         <button onclick="cancelTeamEdit()" class="fey-btn" style="background: #f44336;">❌ Annuler</button>
                     </div>
                 </div>
@@ -1934,6 +2008,36 @@ Ambre</textarea>
                     <strong>✏️ Modification des contacts :</strong> Modifiez les informations de contact qui apparaissent dans la page "Infos". Les modifications sont sauvegardées automatiquement.
                 </div>
                 
+                <!-- Informations générales -->
+                <div style="margin-bottom: 2rem;">
+                    <h3 style="color: var(--c-forest-700); margin-bottom: 1rem; font-size: 1.2rem;">📅 Informations Générales</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">🏕️ Nom de la Sortie</label>
+                            <input type="text" id="outingName" value="Week-end Scout" style="width: 100%; padding: 0.75rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm);">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">📅 Dates</label>
+                            <input type="text" id="outingDates" value="Du 25 au 27 octobre 2025" style="width: 100%; padding: 0.75rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm);">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">⏰ Heure de Départ</label>
+                            <input type="text" id="departureTime" value="Vendredi 8h30" style="width: 100%; padding: 0.75rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm);">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">⏰ Heure de Retour</label>
+                            <input type="text" id="returnTime" value="Dimanche 17h00" style="width: 100%; padding: 0.75rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm);">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">📍 Lieu de Départ</label>
+                            <input type="text" id="departureLocation" value="École Notre-Dame" style="width: 100%; padding: 0.75rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm);">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">🏕️ Lieu du Camp</label>
+                            <input type="text" id="campLocation" value="Jambville (78440)" style="width: 100%; padding: 0.75rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm);">
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Contacts responsables -->
                 <div style="margin-bottom: 2rem;">
@@ -2307,17 +2411,37 @@ Ambre</textarea>
         </div>
     </div>
 
-    <script src="js/common.js"></script>
     <script src="js/calendrier.js"></script>
-    <script src="js/equipes.js"></script>
     <script>
-        // Override showPage function to add page-specific loading
-        const originalShowPage = window.showPage;
-        window.showPage = function(pageId) {
-            // Call the original function
-            originalShowPage(pageId);
+        // Fonction simple pour changer de page
+        function showPage(pageId) {
+            // Cacher toutes les pages
+            const pages = document.querySelectorAll('.fey-page');
+            pages.forEach(page => {
+                page.style.display = 'none';
+                page.classList.remove('active');
+            });
             
-            // Add page-specific functionality
+            // Désactiver tous les onglets
+            const tabs = document.querySelectorAll('.fey-tab');
+            tabs.forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Afficher la page demandée
+            const targetPage = document.getElementById(pageId);
+            if (targetPage) {
+                targetPage.style.display = 'block';
+                targetPage.classList.add('active');
+            }
+            
+            // Activer l'onglet correspondant
+            const targetTab = document.querySelector(`[onclick="showPage('${pageId}')"]`);
+            if (targetTab) {
+                targetTab.classList.add('active');
+            }
+            
+            // Charger le calendrier si nécessaire
             if (pageId === 'calendrier') {
                 setTimeout(() => {
                     if (typeof loadCalendar === 'function') {
@@ -2334,56 +2458,24 @@ Ambre</textarea>
                     }
                 }, 100);
             }
-        };
-
-        // Fonction d'authentification
-        function authenticate() {
-            const password = document.getElementById('passwordInput').value;
-            const errorMessage = document.getElementById('errorMessage');
-            
-            if (password === 'Scout2025!') {
-                // Connexion réussie
-                sessionStorage.setItem('scout_session', 'true');
-                document.getElementById('loginPage').style.display = 'none';
-                document.getElementById('mainContent').style.display = 'block';
-                showPage('liste');
-            } else if (password === 'Admin2025!') {
-                // Connexion admin
-                sessionStorage.setItem('scout_session', 'true');
-                sessionStorage.setItem('admin_mode', 'true');
-                document.getElementById('loginPage').style.display = 'none';
-                document.getElementById('mainContent').style.display = 'block';
-                enableAdminMode();
-                showPage('liste');
-            } else {
-                // Mot de passe incorrect
-                errorMessage.style.display = 'block';
-                setTimeout(() => {
-                    errorMessage.style.display = 'none';
-                }, 3000);
-            }
         }
 
         // Initialiser au chargement
         document.addEventListener('DOMContentLoaded', function() {
-            // Ajouter l'event listener pour le bouton de connexion
-            const loginBtn = document.getElementById('loginBtn');
-            if (loginBtn) {
-                loginBtn.addEventListener('click', authenticate);
+            // Cacher la page de login
+            const loginPage = document.getElementById('loginPage');
+            if (loginPage) {
+                loginPage.style.display = 'none';
             }
             
-            // Ajouter l'event listener pour la touche Entrée
-            const passwordInput = document.getElementById('passwordInput');
-            if (passwordInput) {
-                passwordInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        authenticate();
-                    }
-                });
+            // Afficher la page principale
+            const mainContent = document.getElementById('mainContent');
+            if (mainContent) {
+                mainContent.style.display = 'block';
             }
             
-            // Vérifier la session
-            checkSession();
+            // Afficher la première page par défaut
+            showPage('liste');
         });
 
         // Créer arbres magiques - Réduit pour les performances
@@ -3581,7 +3673,7 @@ Ambre</textarea>
             initScenariosMode();
         }
 
-        // Ouvrir le jeu de tente 1
+        // Ouvrir le jeu de tente
         function ouvrirJeuTente() {
             const windowFeatures = 'width=900,height=700,scrollbars=yes,resizable=yes,status=yes,toolbar=no,menubar=no,location=no';
             const jeuWindow = window.open('jeu_tente.html', 'JeuTente', windowFeatures);
@@ -3596,42 +3688,6 @@ Ambre</textarea>
             } else {
                 // Si les popups sont bloqués, ouvrir dans un nouvel onglet
                 window.open('jeu_tente.html', '_blank');
-            }
-        }
-
-        // Ouvrir le jeu de tente 2
-        function ouvrirJeuTente2() {
-            const windowFeatures = 'width=900,height=700,scrollbars=yes,resizable=yes,status=yes,toolbar=no,menubar=no,location=no';
-            const jeuWindow = window.open('jeu_tente2.html', 'JeuTente2', windowFeatures);
-
-            if (jeuWindow) {
-                // Centrer la fenêtre
-                jeuWindow.moveTo(
-                    (screen.width - 900) / 2,
-                    (screen.height - 700) / 2
-                );
-                jeuWindow.focus();
-            } else {
-                // Si les popups sont bloqués, ouvrir dans un nouvel onglet
-                window.open('jeu_tente2.html', '_blank');
-            }
-        }
-
-        // Ouvrir le jeu de sac scout
-        function ouvrirJeuSac() {
-            const windowFeatures = 'width=1200,height=800,scrollbars=yes,resizable=yes,status=yes,toolbar=no,menubar=no,location=no';
-            const jeuWindow = window.open('scout_bag_game (1).html', 'JeuSacScout', windowFeatures);
-
-            if (jeuWindow) {
-                // Centrer la fenêtre
-                jeuWindow.moveTo(
-                    (screen.width - 1200) / 2,
-                    (screen.height - 800) / 2
-                );
-                jeuWindow.focus();
-            } else {
-                // Si les popups sont bloqués, ouvrir dans un nouvel onglet
-                window.open('scout_bag_game (1).html', '_blank');
             }
         }
 
@@ -3867,12 +3923,8 @@ Ambre</textarea>
                 };
             });
             
-            // Si aucune sortie admin, utiliser les sorties par défaut du programme 2025-2026
+            // Si aucune sortie admin, utiliser les sorties par défaut
             if (Object.keys(events).length === 0) {
-                return getDefaultCalendarEvents();
-            }
-            
-            // Code de fallback (ne devrait plus être utilisé)
             return {
                 // Décembre 2024
                 '15-12-2024': {
@@ -5360,15 +5412,19 @@ Ambre</textarea>
             loadChildrenWithoutCar('weekend-groupe');
         });
 
-        // Fonction pour activer le mode admin - sera redéfinie plus tard
+        // Fonction pour activer le mode admin
+        function enableAdminMode() {
+            const adminTab = document.getElementById('adminTab');
+            if (adminTab) {
+                adminTab.style.display = 'inline-block';
+            }
+        }
 
         // Vérifier si l'utilisateur est admin (mot de passe spécial)
         function checkAdminAccess() {
             const password = document.getElementById('passwordInput').value;
             if (password === 'Admin2025!') {
-                if (typeof enableAdminMode === 'function') {
-                    enableAdminMode();
-                }
+                enableAdminMode();
                 return true;
             }
             return false;
@@ -6063,133 +6119,6 @@ Ambre</textarea>
             console.log('📅 Détails des événements:', events);
             
             return events;
-        }
-
-        // Fonction pour obtenir les événements par défaut du programme 2025-2026
-        function getDefaultCalendarEvents() {
-            return {
-                // Septembre 2025
-                '28-9-2025': {
-                    title: '👨‍👩‍👧‍👦 Réunion parents',
-                    time: 'Dimanche',
-                    description: 'Réunion d\'information pour les parents'
-                },
-
-                // Octobre 2025
-                '3-10-2025': {
-                    title: '🏕️ Weekend de Groupe',
-                    time: 'Vendredi - Départ',
-                    description: 'Weekend de groupe avec activités scoutes'
-                },
-                '4-10-2025': {
-                    title: '🏕️ Weekend de Groupe',
-                    time: 'Samedi - Retour',
-                    description: 'Weekend de groupe avec activités scoutes'
-                },
-                '12-10-2025': {
-                    title: '⛵ Sortie voile',
-                    time: 'Dimanche',
-                    description: 'Sortie voile à Verneuil sur Seine'
-                },
-
-                // Novembre 2025
-                '15-11-2025': {
-                    title: '⛪ Weekend Abbaye d\'Epernon',
-                    time: 'Samedi - Départ',
-                    description: 'Weekend au Prieuré Saint Thomas'
-                },
-                '16-11-2025': {
-                    title: '⛪ Weekend Abbaye d\'Epernon',
-                    time: 'Dimanche - Retour',
-                    description: 'Weekend au Prieuré Saint Thomas'
-                },
-
-                // Décembre 2025
-                '14-12-2025': {
-                    title: '🕯️ Lumière de Bethléem',
-                    time: 'Dimanche',
-                    description: 'Lumière de Bethléem + Crèche vivante'
-                },
-
-                // Janvier 2026
-                '18-1-2026': {
-                    title: '⚓ Sortie Musée de la Marine',
-                    time: 'Dimanche',
-                    description: 'Sortie Musée de la Marine + galettes'
-                },
-
-                // Février 2026
-                '8-2-2026': {
-                    title: '🗼 Sortie Montmartre',
-                    time: 'Dimanche',
-                    description: 'Découverte de Montmartre et du Sacré-Cœur'
-                },
-
-                // Mars 2026
-                '14-3-2026': {
-                    title: '🌸 Weekend de mars',
-                    time: 'Samedi - Départ',
-                    description: 'Weekend de printemps avec activités nature'
-                },
-                '15-3-2026': {
-                    title: '🌸 Weekend de mars',
-                    time: 'Dimanche - Retour',
-                    description: 'Weekend de printemps avec activités nature'
-                },
-
-                // Avril 2026
-                '12-4-2026': {
-                    title: '🏰 Sortie château',
-                    time: 'Dimanche',
-                    description: 'Visite d\'un château historique'
-                },
-
-                // Mai 2026
-                '15-5-2026': {
-                    title: '🏰 Mini-camp Mont Saint-Michel',
-                    time: 'Vendredi - Départ',
-                    description: 'Mini-camp au Mont Saint-Michel'
-                },
-                '16-5-2026': {
-                    title: '🏰 Mini-camp Mont Saint-Michel',
-                    time: 'Samedi',
-                    description: 'Mini-camp au Mont Saint-Michel'
-                },
-                '17-5-2026': {
-                    title: '🏰 Mini-camp Mont Saint-Michel',
-                    time: 'Dimanche - Retour',
-                    description: 'Mini-camp au Mont Saint-Michel'
-                },
-
-                // Juin 2026
-                '12-6-2026': {
-                    title: '👨‍👩‍👧‍👦 Réunion présentation camp',
-                    time: 'Vendredi 18h-20h',
-                    description: 'Réunion de présentation du camp d\'été'
-                },
-                '13-6-2026': {
-                    title: '🌸 Weekend de juin',
-                    time: 'Samedi - Départ',
-                    description: 'Weekend de fin d\'année'
-                },
-                '14-6-2026': {
-                    title: '🌸 Weekend de juin',
-                    time: 'Dimanche - Retour',
-                    description: 'Weekend de fin d\'année'
-                },
-
-                // Juillet 2026
-                '5-7-2026': {
-                    title: '🏕️ Camp d\'été',
-                    time: 'Départ',
-                    description: 'Camp d\'été (première quinzaine des vacances Zone C)'
-                },
-                '19-7-2026': {
-                    title: '🏕️ Camp d\'été',
-                    time: 'Retour',
-                    description: 'Fin du camp d\'été (dates exactes à confirmer)'
-                }
-            };
         }
         
         // Charger les sorties au démarrage
@@ -7185,26 +7114,17 @@ displayOutingInfo(event, dateKey);
             }
         }
 
-        // Fonction enableAdminMode complète
-        function enableAdminMode() {
-            const adminTab = document.getElementById('adminTab');
-            if (adminTab) {
-                adminTab.style.display = 'inline-block';
-            }
-            
-            // Activer aussi le registre d'appel
+        // Modifier la fonction enableAdminMode pour inclure le registre et la checklist
+        const originalEnableAdminMode = enableAdminMode;
+        enableAdminMode = function() {
+            originalEnableAdminMode();
             enableRegistreTab();
-            
             // Charger les éléments de la checklist
             setTimeout(() => {
-                if (typeof loadChecklistItems === 'function') {
-                    loadChecklistItems();
-                }
-                if (typeof loadCalendarTrips === 'function') {
-                    loadCalendarTrips();
-                }
+                loadChecklistItems();
+                loadCalendarTrips(); // Charger les sorties du calendrier dans l'admin
             }, 100);
-        }
+        };
 
         // Fonction pour charger les sorties du calendrier dans l'admin
         function loadCalendarTrips() {
@@ -7868,6 +7788,11 @@ displayOutingInfo(event, dateKey);
             const contactInfo = JSON.parse(localStorage.getItem('contact-info') || '{}');
             
             // Charger les informations générales
+            if (contactInfo.outingName) document.getElementById('outingName').value = contactInfo.outingName;
+            if (contactInfo.outingDates) document.getElementById('outingDates').value = contactInfo.outingDates;
+            if (contactInfo.departureTime) document.getElementById('departureTime').value = contactInfo.departureTime;
+            if (contactInfo.returnTime) document.getElementById('returnTime').value = contactInfo.returnTime;
+            if (contactInfo.departureLocation) document.getElementById('departureLocation').value = contactInfo.departureLocation;
             if (contactInfo.campLocation) document.getElementById('campLocation').value = contactInfo.campLocation;
             if (contactInfo.driveLink) document.getElementById('driveLink').value = contactInfo.driveLink;
 
@@ -7904,12 +7829,17 @@ displayOutingInfo(event, dateKey);
                             <input type="tel" value="${contact.phone}" data-field="phone" style="width: 100%; padding: 0.5rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm);">
                         </div>
                         <div>
-                            <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">📧 Email <span style="color: #666; font-size: 0.8rem;">(optionnel)</span></label>
-                            <input type="email" value="${contact.email || ''}" data-field="email" placeholder="email@exemple.com" style="width: 100%; padding: 0.5rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm);">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">📧 Email</label>
+                            <input type="email" value="${contact.email}" data-field="email" style="width: 100%; padding: 0.5rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm);">
                         </div>
                         <div>
-                            <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">🎭 Rôle <span style="color: #666; font-size: 0.8rem;">(optionnel)</span></label>
-                            <input type="text" value="${contact.role || ''}" data-field="role" placeholder="ex: Responsable, Urgence, Transport..." style="width: 100%; padding: 0.5rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm);">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">🎭 Rôle</label>
+                            <select data-field="role" style="width: 100%; padding: 0.5rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm);">
+                                <option value="Responsable" ${contact.role === 'Responsable' ? 'selected' : ''}>Responsable</option>
+                                <option value="Urgence" ${contact.role === 'Urgence' ? 'selected' : ''}>Urgence</option>
+                                <option value="Transport" ${contact.role === 'Transport' ? 'selected' : ''}>Transport</option>
+                                <option value="Santé" ${contact.role === 'Santé' ? 'selected' : ''}>Santé</option>
+                            </select>
                         </div>
                     </div>
                     <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
@@ -7924,6 +7854,11 @@ displayOutingInfo(event, dateKey);
         // Mettre à jour la page Infos avec les données
         function updateInfoPage(contactInfo, contacts) {
             // Mettre à jour les informations générales
+            if (contactInfo.outingName) document.getElementById('info-outing-name').textContent = contactInfo.outingName;
+            if (contactInfo.outingDates) document.getElementById('info-outing-dates').textContent = contactInfo.outingDates;
+            if (contactInfo.departureTime) document.getElementById('info-departure-time').textContent = contactInfo.departureTime;
+            if (contactInfo.returnTime) document.getElementById('info-return-time').textContent = contactInfo.returnTime;
+            if (contactInfo.departureLocation) document.getElementById('info-departure-location').textContent = contactInfo.departureLocation;
             if (contactInfo.campLocation) document.getElementById('info-camp-location').textContent = contactInfo.campLocation;
 
             // Mettre à jour la liste des contacts
@@ -7934,7 +7869,7 @@ displayOutingInfo(event, dateKey);
                     const contactDiv = document.createElement('div');
                     contactDiv.style.cssText = 'margin-bottom: 0.5rem; padding: 0.5rem; background: #f8f9fa; border-radius: 4px;';
                     contactDiv.innerHTML = `
-                        <p><strong>${contact.role ? contact.role + ' :' : ''}</strong> ${contact.name}</p>
+                        <p><strong>${contact.role} :</strong> ${contact.name}</p>
                         <p><strong>Téléphone :</strong> ${contact.phone}</p>
                         ${contact.email ? `<p><strong>Email :</strong> ${contact.email}</p>` : ''}
                     `;
@@ -7946,6 +7881,11 @@ displayOutingInfo(event, dateKey);
         // Sauvegarder toutes les informations de contact
         function saveContactInfo() {
             const contactInfo = {
+                outingName: document.getElementById('outingName').value,
+                outingDates: document.getElementById('outingDates').value,
+                departureTime: document.getElementById('departureTime').value,
+                returnTime: document.getElementById('returnTime').value,
+                departureLocation: document.getElementById('departureLocation').value,
                 campLocation: document.getElementById('campLocation').value,
                 driveLink: document.getElementById('driveLink').value,
                 contacts: getContactsFromForm()
@@ -7982,14 +7922,14 @@ displayOutingInfo(event, dateKey);
         // Sauvegarder un contact individuel
         function saveContact(contactId) {
             const contactElement = document.querySelector(`button[onclick="saveContact(${contactId})"]`).closest('.fey-item');
-            const inputs = contactElement.querySelectorAll('input');
+            const inputs = contactElement.querySelectorAll('input, select');
             
             const contact = {
                 id: contactId,
                 name: inputs[0].value,
                 phone: inputs[1].value,
-                email: inputs[2].value || '', // Champ optionnel
-                role: inputs[3].value || '' // Champ optionnel
+                email: inputs[2].value,
+                role: inputs[3].value
             };
 
             const contactInfo = JSON.parse(localStorage.getItem('contact-info') || '{}');
@@ -8020,8 +7960,8 @@ displayOutingInfo(event, dateKey);
                 id: Math.max(...contacts.map(c => c.id), 0) + 1,
                 name: 'Nouveau Contact',
                 phone: '06.00.00.00.00',
-                email: '', // Champ optionnel
-                role: '' // Champ optionnel
+                email: 'nouveau@email.com',
+                role: 'Responsable'
             };
             
             contacts.push(newContact);
@@ -8091,114 +8031,6 @@ displayOutingInfo(event, dateKey);
                 alert('⚠️ Aucun numéro de responsable configuré. Veuillez configurer les contacts dans le panneau admin.');
             }
         }
-
-        // === GESTION DES ÉQUIPES ===
-        
-        // Charger et afficher les équipes de vie
-        function loadVieTeams() {
-            const container = document.getElementById('vieTeamsDisplay');
-            if (!container) return;
-            
-            const vieTeams = getLifeTeams();
-            let html = '';
-            
-            Object.values(vieTeams).forEach(team => {
-                const rotation = Math.random() > 0.5 ? 'rotate(-1deg)' : 'rotate(1deg)';
-                html += `
-                    <div style="background: ${team.color}; color: white; padding: 1.5rem; border-radius: var(--r-md); border: 3px solid var(--c-ink-900); box-shadow: 4px 4px 0 var(--c-ink-900); transform: ${rotation};">
-                        <h3 style="font-family: 'Patrick Hand', cursive; font-size: 1.5rem; margin-bottom: 1rem; border-bottom: 2px solid rgba(255, 255, 255, 0.3); padding-bottom: 0.5rem;">${team.name}</h3>
-                        ${team.members.map(member => `<div style="padding: 0.5rem 0; font-size: 1rem;">• ${member}</div>`).join('')}
-                    </div>
-                `;
-            });
-            
-            container.innerHTML = html;
-        }
-        
-        // Charger et afficher les équipes de nuit
-        function loadNuitTeams() {
-            const container = document.getElementById('nuitTeamsDisplay');
-            if (!container) return;
-            
-            const nuitTeams = getNightTeams();
-            let html = '';
-            
-            Object.values(nuitTeams).forEach(team => {
-                html += `
-                    <div style="background: ${team.color}; color: white; padding: 1rem; border-radius: var(--r-sm); border: 2px solid var(--c-ink-900); text-align: center;">
-                        <h4 style="font-family: 'Patrick Hand', cursive; margin-bottom: 0.5rem;">${team.name}</h4>
-                        <div style="font-size: 0.9rem; text-align: left; padding: 0.5rem;">
-                            ${team.members.map(member => `• ${member}<br>`).join('')}
-                        </div>
-                    </div>
-                `;
-            });
-            
-            container.innerHTML = html;
-        }
-        
-        // Charger toutes les équipes
-        function loadAllTeams() {
-            loadVieTeams();
-            loadNuitTeams();
-        }
-        
-        // Mettre à jour l'éditeur d'équipes existant pour utiliser le système centralisé
-        function updateTeamEditorWithCentralizedData() {
-            // Cette fonction met à jour l'éditeur existant dans la page équipes
-            const vieTeams = getLifeTeams();
-            const nuitTeams = getNightTeams();
-            
-            // Mettre à jour les textareas existants si ils existent
-            Object.entries(vieTeams).forEach(([teamId, team]) => {
-                const textarea = document.getElementById(`team-${teamId}`);
-                if (textarea) {
-                    textarea.value = team.members.join('\n');
-                }
-            });
-        }
-        
-        // Sauvegarder les changements d'équipes depuis l'éditeur existant
-        function saveTeamChangesFromEditor() {
-            const vieTeams = getLifeTeams();
-            const updatedTeams = { ...vieTeams };
-            
-            // Lire les textareas existants
-            Object.keys(vieTeams).forEach(teamId => {
-                const textarea = document.getElementById(`team-${teamId}`);
-                if (textarea) {
-                    const members = textarea.value.split('\n').filter(m => m.trim() !== '');
-                    updatedTeams[teamId].members = members;
-                }
-            });
-            
-            // Sauvegarder
-            const teams = loadTeams();
-            teams.vie = updatedTeams;
-            saveTeams(teams);
-            
-            // Recharger l'affichage
-            loadAllTeams();
-            
-            alert('✅ Équipes sauvegardées !');
-        }
-        
-        // Charger les équipes au démarrage de la page équipes
-        document.addEventListener('DOMContentLoaded', function() {
-            // Charger les équipes quand la page équipes est affichée
-            const originalShowPage = window.showPage;
-            window.showPage = function(pageId) {
-                originalShowPage(pageId);
-                
-                // Charger les équipes si on affiche la page équipes
-                if (pageId === 'equipes') {
-                    setTimeout(() => {
-                        loadAllTeams();
-                        updateTeamEditorWithCentralizedData();
-                    }, 100);
-                }
-            };
-        });
     </script>
 </body>
 </html>
