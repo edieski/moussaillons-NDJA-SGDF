@@ -1,0 +1,8 @@
+{
+  "scripts": {
+    "check:supabase": "node ./scripts/checkSupabaseClient.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.80.0"
+  }
+}

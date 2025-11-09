@@ -56,6 +56,7 @@
                 <div class="admin-controls">
                     <button class="fey-btn" onclick="addNewCarpoolTrip()">➕ Nouvelle Sortie Covoiturage</button>
                     <button class="fey-btn" onclick="refreshCarpoolTrips()">🔄 Actualiser</button>
+                    <button class="fey-btn" onclick="runSupabaseTest()">🧪 Tester Supabase</button>
                 </div>
                 <div class="trips-list" id="carpoolTripsList">
                     <!-- Les sorties covoiturage seront chargées ici -->
@@ -349,6 +350,9 @@
         </div>
     </div>
 
+    <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/supabaseClient.js"></script>
     <script src="js/common.js"></script>
     <script src="js/equipes.js"></script>
     <script>
@@ -358,6 +362,31 @@
                 window.location.href = 'index.html';
             } else {
                 window.location.href = page + '.html';
+            }
+        }
+
+        const supabase = window.carpoolSupabase;
+        let carpoolTripsCache = [];
+
+        const ADMIN_LOG_PREFIX = '[Admin][Covoiturage]';
+
+        function adminLog(message, payload) {
+            if (typeof payload !== 'undefined') {
+                console.log(`${ADMIN_LOG_PREFIX} ${message}`, payload);
+            } else {
+                console.log(`${ADMIN_LOG_PREFIX} ${message}`);
+            }
+        }
+
+        function adminNotify(message, type = 'info') {
+            if (typeof showNotification === 'function') {
+                showNotification(message, type);
+            } else if (type === 'error') {
+                console.error(`${ADMIN_LOG_PREFIX} ${message}`);
+            } else if (type === 'warning') {
+                console.warn(`${ADMIN_LOG_PREFIX} ${message}`);
+            } else {
+                console.log(`${ADMIN_LOG_PREFIX} ${message}`);
             }
         }
 
@@ -391,33 +420,81 @@
 
         // Charger les sorties depuis localStorage
         function loadTrips() {
-            const saved = localStorage.getItem('admin-outings');
-            if (saved) {
-                return JSON.parse(saved);
+            try {
+                const saved = localStorage.getItem('admin-outings');
+                if (!saved) {
+                    adminLog('Aucune sortie locale enregistrée, utilisation des valeurs par défaut.');
+                    return defaultTrips;
+                }
+
+                const parsed = JSON.parse(saved);
+                if (!Array.isArray(parsed)) {
+                    adminNotify('Format inattendu dans le stockage local, réinitialisation des sorties.', 'warning');
+                    return defaultTrips;
+                }
+
+                adminLog('Sorties chargées depuis le stockage local.', parsed);
+                return parsed;
+            } catch (error) {
+                console.error(`${ADMIN_LOG_PREFIX} Erreur lors du chargement des sorties locales`, error);
+                adminNotify('Impossible de charger les sorties locales. Valeurs par défaut utilisées.', 'warning');
+                return defaultTrips;
             }
-            return defaultTrips;
         }
 
         // Sauvegarder les sorties
         function saveTrips(trips) {
-            localStorage.setItem('admin-outings', JSON.stringify(trips));
+            try {
+                localStorage.setItem('admin-outings', JSON.stringify(trips));
+                adminLog('Sorties sauvegardées dans le stockage local.', trips);
+                return true;
+            } catch (error) {
+                console.error(`${ADMIN_LOG_PREFIX} Erreur lors de la sauvegarde des sorties`, error);
+                adminNotify('Impossible de sauvegarder les sorties en local. Vérifiez le quota ou les permissions du navigateur.', 'error');
+                return false;
+            }
         }
 
-        // Charger les sorties covoiturage
-        function loadCarpoolTrips() {
-            const saved = localStorage.getItem('carpool-trips');
-            return saved ? JSON.parse(saved) : [];
-        }
+        // Charger les sorties covoiturage depuis Supabase
+        async function loadCarpoolTrips() {
+            if (!supabase) {
+                adminNotify('Configuration Supabase manquante : impossible de charger les sorties covoiturage.', 'error');
+                return [];
+            }
 
-        // Sauvegarder les sorties covoiturage
-        function saveCarpoolTrips(trips) {
-            localStorage.setItem('carpool-trips', JSON.stringify(trips));
+            adminLog('Chargement des sorties covoiturage depuis Supabase...');
+
+            try {
+                const { data, error } = await supabase
+                    .from('carpool_trips')
+                    .select('*')
+                    .order('date', { ascending: true })
+                    .order('created_at', { ascending: true });
+
+                if (error) {
+                    throw error;
+                }
+
+                carpoolTripsCache = data || [];
+                adminLog('Sorties covoiturage chargées depuis Supabase.', carpoolTripsCache);
+                return carpoolTripsCache;
+            } catch (error) {
+                console.error(`${ADMIN_LOG_PREFIX} Erreur lors du chargement des sorties covoiturage`, error);
+                adminNotify('Impossible de récupérer les sorties covoiturage depuis Supabase.', 'error');
+                return [];
+            }
         }
 
         // Afficher les sorties
         function displayTrips() {
             const trips = loadTrips();
             const container = document.getElementById('calendarTripsList');
+            if (!container) {
+                console.error(`${ADMIN_LOG_PREFIX} Conteneur #calendarTripsList introuvable.`);
+                return;
+            }
+
+            adminLog(`Affichage de ${trips.length} sortie(s) locales.`, trips);
             
             if (trips.length === 0) {
                 container.innerHTML = '<div class="fey-note">Aucune sortie enregistrée.</div>';
@@ -445,7 +522,7 @@
                         <div class="trip-actions">
                             <label class="carpool-toggle">
                                 <input type="checkbox" ${trip.carpool ? 'checked' : ''} 
-                                       onchange="toggleCarpool(${trip.id})">
+                                       onchange="toggleCarpool(event, ${trip.id})">
                                 <span>🚗 Covoiturage</span>
                             </label>
                             <button class="fey-btn-small" onclick="editTrip(${trip.id})">✏️</button>
@@ -459,11 +536,19 @@
         }
 
         // Afficher les sorties covoiturage
-        function displayCarpoolTrips() {
-            const trips = loadCarpoolTrips();
+        async function displayCarpoolTrips() {
             const container = document.getElementById('carpoolTripsList');
-            
-            if (trips.length === 0) {
+            if (!container) {
+                console.error(`${ADMIN_LOG_PREFIX} Conteneur #carpoolTripsList introuvable.`);
+                return;
+            }
+
+            container.innerHTML = '<div class="fey-note">Chargement des sorties covoiturage...</div>';
+
+            const trips = await loadCarpoolTrips();
+            adminLog(`Affichage de ${trips.length} sortie(s) covoiturage depuis Supabase.`, trips);
+
+            if (!trips.length) {
                 container.innerHTML = '<div class="fey-note">Aucune sortie covoiturage enregistrée.</div>';
                 return;
             }
@@ -472,9 +557,9 @@
                 <div class="trip-item">
                     <div class="trip-info">
                         <div class="trip-title">${trip.title}</div>
-                        <div class="trip-date">📅 ${new Date(trip.date).toLocaleDateString('fr-FR')}</div>
-                        <div class="trip-location">📍 ${trip.location}</div>
-                        <div class="trip-description">${trip.description}</div>
+                        <div class="trip-date">📅 ${trip.date ? new Date(trip.date).toLocaleDateString('fr-FR') : 'Date à définir'}</div>
+                        <div class="trip-location">📍 ${trip.location || 'Lieu à définir'}</div>
+                        <div class="trip-description">${trip.description || ''}</div>
                     </div>
                     <div class="trip-actions">
                         <button class="fey-btn-small" onclick="editCarpoolTrip(${trip.id})">✏️</button>
@@ -487,28 +572,134 @@
         }
 
         // Basculer le covoiturage
-        function toggleCarpool(tripId) {
+        async function toggleCarpool(event, tripId) {
+            const checkbox = event?.target;
+            const isChecked = checkbox?.checked ?? false;
             const trips = loadTrips();
             const trip = trips.find(t => t.id === tripId);
-            if (trip) {
-                trip.carpool = !trip.carpool;
-                saveTrips(trips);
-                
-                if (trip.carpool) {
-                    // Ajouter à la liste covoiturage
-                    const carpoolTrips = loadCarpoolTrips();
-                    carpoolTrips.push(trip);
-                    saveCarpoolTrips(carpoolTrips);
-                } else {
-                    // Retirer de la liste covoiturage
-                    const carpoolTrips = loadCarpoolTrips();
-                    const filtered = carpoolTrips.filter(t => t.id !== tripId);
-                    saveCarpoolTrips(filtered);
+
+            if (!trip) {
+                adminNotify('Sortie introuvable, impossible de modifier le covoiturage.', 'error');
+                if (checkbox) {
+                    checkbox.checked = !isChecked;
                 }
-                
-                displayTrips();
-                displayCarpoolTrips();
+                return;
             }
+
+            if (!supabase) {
+                adminNotify('Configuration Supabase manquante. Activez la configuration avant de modifier le covoiturage.', 'error');
+                if (checkbox) {
+                    checkbox.checked = !isChecked;
+                }
+                return;
+            }
+
+            adminLog(`${isChecked ? 'Activation' : 'Désactivation'} du covoiturage pour la sortie`, trip);
+
+            if (isChecked) {
+                try {
+                    const remoteTrips = carpoolTripsCache.length ? carpoolTripsCache : await loadCarpoolTrips();
+                    const existingTrip = remoteTrips.find(t => t.title === trip.title && (t.date || null) === (trip.date || null));
+
+                    let data;
+
+                    if (existingTrip) {
+                        const { data: updated, error } = await supabase
+                            .from('carpool_trips')
+                            .update({
+                                title: trip.title,
+                                date: trip.date || null,
+                                location: trip.location || '',
+                                description: trip.description || ''
+                            })
+                            .eq('id', existingTrip.id)
+                            .select()
+                            .single();
+
+                        if (error) throw error;
+                        data = updated;
+                    } else {
+                        const { data: inserted, error } = await supabase
+                            .from('carpool_trips')
+                            .insert({
+                                title: trip.title,
+                                date: trip.date || null,
+                                location: trip.location || '',
+                                description: trip.description || ''
+                            })
+                            .select()
+                            .single();
+
+                        if (error) throw error;
+                        data = inserted;
+                    }
+
+                    trip.carpool = true;
+                    trip.carpoolTripId = data.id;
+                    if (data) {
+                        const existingIndex = carpoolTripsCache.findIndex(t => t.id === data.id);
+                        if (existingIndex !== -1) {
+                            carpoolTripsCache[existingIndex] = data;
+                        } else {
+                            carpoolTripsCache.push(data);
+                        }
+                    }
+                    const savedLocally = saveTrips(trips);
+                    if (savedLocally) {
+                        adminNotify(`Covoiturage activé pour "${trip.title}".`, 'success');
+                    } else {
+                        adminNotify(`Covoiturage activé pour "${trip.title}", mais la sauvegarde locale a échoué.`, 'warning');
+                    }
+                } catch (error) {
+                    console.error(`${ADMIN_LOG_PREFIX} Erreur lors de l'activation du covoiturage`, error);
+                    const reason = error?.message ? ` (${error.message})` : '';
+                    adminNotify(`Impossible d’activer le covoiturage${reason}. Merci de réessayer.`, 'error');
+                    if (checkbox) {
+                        checkbox.checked = false;
+                    }
+                    return;
+                }
+            } else {
+                try {
+                    let carpoolTripId = trip.carpoolTripId;
+
+                    if (!carpoolTripId) {
+                        const remoteTrips = carpoolTripsCache.length ? carpoolTripsCache : await loadCarpoolTrips();
+                        const match = remoteTrips.find(t => t.title === trip.title && t.date === trip.date);
+                        carpoolTripId = match ? match.id : null;
+                    }
+
+                    if (carpoolTripId) {
+                        const { error } = await supabase
+                            .from('carpool_trips')
+                            .delete()
+                            .eq('id', carpoolTripId);
+
+                        if (error) throw error;
+                        carpoolTripsCache = carpoolTripsCache.filter(t => t.id !== carpoolTripId);
+                    }
+
+                    trip.carpool = false;
+                    delete trip.carpoolTripId;
+                    const savedLocally = saveTrips(trips);
+                    if (savedLocally) {
+                        adminNotify(`Covoiturage désactivé pour "${trip.title}".`, 'success');
+                    } else {
+                        adminNotify(`Covoiturage désactivé pour "${trip.title}", mais la sauvegarde locale a échoué.`, 'warning');
+                    }
+                } catch (error) {
+                    console.error(`${ADMIN_LOG_PREFIX} Erreur lors de la désactivation du covoiturage`, error);
+                    const reason = error?.message ? ` (${error.message})` : '';
+                    adminNotify(`Impossible de désactiver le covoiturage${reason}. Merci de réessayer.`, 'error');
+                    if (checkbox) {
+                        checkbox.checked = true;
+                    }
+                    return;
+                }
+            }
+
+            displayTrips();
+            await displayCarpoolTrips();
         }
 
         // Variables globales pour l'édition
@@ -575,12 +766,14 @@
             };
 
             if (!tripData.title || !tripData.date) {
-                alert('Le titre et la date sont obligatoires !');
+                adminNotify('Le titre et la date sont obligatoires.', 'warning');
                 return;
             }
 
             const trips = loadTrips();
             
+            adminLog(editingTripId ? 'Mise à jour d\'une sortie locale.' : 'Création d\'une nouvelle sortie locale.', { editingTripId, tripData });
+
             if (editingTripId) {
                 // Modification
                 const tripIndex = trips.findIndex(t => t.id === editingTripId);
@@ -596,7 +789,13 @@
                 trips.push(newTrip);
             }
             
-            saveTrips(trips);
+            const saved = saveTrips(trips);
+            if (saved) {
+                adminNotify('Sortie sauvegardée.', 'success');
+            } else {
+                adminNotify('Sortie enregistrée mais la sauvegarde locale a échoué.', 'warning');
+            }
+
             displayTrips();
             closeTripEditor();
         }
@@ -606,45 +805,307 @@
             if (confirm('Êtes-vous sûr de vouloir supprimer cette sortie ?')) {
                 const trips = loadTrips();
                 const filtered = trips.filter(t => t.id !== tripId);
-                saveTrips(filtered);
+                const saved = saveTrips(filtered);
+                adminLog('Suppression d\'une sortie locale.', { tripId });
+                if (saved) {
+                    adminNotify('Sortie supprimée.', 'success');
+                } else {
+                    adminNotify('Sortie supprimée mais la sauvegarde locale a échoué.', 'warning');
+                }
                 displayTrips();
             }
         }
 
         // Ajouter une nouvelle sortie covoiturage
-        function addNewCarpoolTrip() {
-            const title = prompt('Titre de la sortie :');
-            if (!title) return;
-            
-            const date = prompt('Date (YYYY-MM-DD) :');
-            if (!date) return;
-            
-            const location = prompt('Lieu :');
-            const description = prompt('Description :');
-            
-            const trips = loadCarpoolTrips();
-            const newTrip = {
-                id: Date.now(),
-                title,
-                date,
-                location: location || '',
-                description: description || '',
-                carpool: true
-            };
-            
-            trips.push(newTrip);
-            saveCarpoolTrips(trips);
-            displayCarpoolTrips();
+        async function addNewCarpoolTrip() {
+            const titleInput = prompt('Titre de la sortie :');
+            const title = titleInput ? titleInput.trim() : '';
+            if (!title) {
+                adminNotify('Le titre est obligatoire pour créer une sortie.', 'warning');
+                return;
+            }
+
+            const dateInput = prompt('Date (YYYY-MM-DD) :');
+            const date = dateInput ? dateInput.trim() : '';
+            const locationInput = prompt('Lieu :');
+            const location = locationInput ? locationInput.trim() : '';
+            const descriptionInput = prompt('Description :');
+            const description = descriptionInput ? descriptionInput.trim() : '';
+
+            if (!supabase) {
+                adminNotify('Configuration Supabase manquante.', 'error');
+                return;
+            }
+
+            adminLog('Création manuelle d\'une sortie covoiturage.', { title, date, location });
+
+            try {
+                const { data, error } = await supabase
+                    .from('carpool_trips')
+                    .insert({
+                        title,
+                        date: date || null,
+                        location: location || '',
+                        description: description || ''
+                    })
+                    .select()
+                    .single();
+
+                if (error) throw error;
+
+                carpoolTripsCache.push(data);
+                adminNotify(`Sortie covoiturage "${title}" créée.`, 'success');
+                await displayCarpoolTrips();
+            } catch (error) {
+                console.error(`${ADMIN_LOG_PREFIX} Erreur lors de la création d'une sortie covoiturage`, error);
+                adminNotify('Impossible de créer la sortie covoiturage. Réessayez plus tard.', 'error');
+            }
         }
 
         // Actualiser les sorties
         function refreshTrips() {
+            adminLog('Actualisation manuelle des sorties locales demandée par l\'utilisateur.');
             displayTrips();
         }
 
         // Actualiser les sorties covoiturage
         function refreshCarpoolTrips() {
+            adminLog('Actualisation manuelle des sorties covoiturage demandée par l\'utilisateur.');
             displayCarpoolTrips();
+        }
+
+        async function runSupabaseTest() {
+            if (!supabase) {
+                adminNotify('Configuration Supabase manquante. Impossible d\'exécuter le test.', 'error');
+                return;
+            }
+
+            const timestamp = new Date().toISOString();
+            const testDate = timestamp.slice(0, 10);
+            const testLabel = `Test ${timestamp}`;
+
+            adminNotify('Test Supabase en cours...', 'info');
+            adminLog('Début du test Supabase.', { timestamp });
+
+            const created = {
+                trip: null,
+                driver: null,
+                passenger: null
+            };
+
+            try {
+                const { data: trip, error: tripError } = await supabase
+                    .from('carpool_trips')
+                    .insert({
+                        title: `🧪 ${testLabel}`,
+                        date: testDate,
+                        location: 'Test automatique',
+                        description: 'Entrée de test générée depuis la page Admin.'
+                    })
+                    .select()
+                    .single();
+
+                if (tripError) {
+                    throw new Error(`Insertion carpool_trips: ${tripError.message || 'erreur inconnue'}`);
+                }
+
+                created.trip = trip;
+
+                const { data: driver, error: driverError } = await supabase
+                    .from('carpool_drivers')
+                    .insert({
+                        trip_id: trip.id,
+                        name: `Conducteur ${testLabel}`,
+                        phone: '',
+                        car: 'Véhicule de test',
+                        seats_available: 4
+                    })
+                    .select()
+                    .single();
+
+                if (driverError) {
+                    throw new Error(`Insertion carpool_drivers: ${driverError.message || 'erreur inconnue'}`);
+                }
+
+                created.driver = driver;
+
+                const { data: passenger, error: passengerError } = await supabase
+                    .from('carpool_passengers')
+                    .insert({
+                        trip_id: trip.id,
+                        name: `Passager ${testLabel}`
+                    })
+                    .select()
+                    .single();
+
+                if (passengerError) {
+                    throw new Error(`Insertion carpool_passengers: ${passengerError.message || 'erreur inconnue'}`);
+                }
+
+                created.passenger = passenger;
+
+                const [tripCheck, driverCheck, passengerCheck] = await Promise.all([
+                    supabase
+                        .from('carpool_trips')
+                        .select('*')
+                        .eq('id', trip.id)
+                        .maybeSingle(),
+                    supabase
+                        .from('carpool_drivers')
+                        .select('*')
+                        .eq('id', driver.id)
+                        .maybeSingle(),
+                    supabase
+                        .from('carpool_passengers')
+                        .select('*')
+                        .eq('id', passenger.id)
+                        .maybeSingle()
+                ]);
+
+                if (tripCheck.error) {
+                    throw new Error(`Lecture carpool_trips: ${tripCheck.error.message || 'erreur inconnue'}`);
+                }
+                if (!tripCheck.data) {
+                    throw new Error('Lecture carpool_trips: aucune ligne trouvée.');
+                }
+
+                if (driverCheck.error) {
+                    throw new Error(`Lecture carpool_drivers: ${driverCheck.error.message || 'erreur inconnue'}`);
+                }
+                if (!driverCheck.data) {
+                    throw new Error('Lecture carpool_drivers: aucune ligne trouvée.');
+                }
+
+                if (passengerCheck.error) {
+                    throw new Error(`Lecture carpool_passengers: ${passengerCheck.error.message || 'erreur inconnue'}`);
+                }
+                if (!passengerCheck.data) {
+                    throw new Error('Lecture carpool_passengers: aucune ligne trouvée.');
+                }
+
+                adminLog('Test Supabase réussi.', {
+                    trip: tripCheck.data,
+                    driver: driverCheck.data,
+                    passenger: passengerCheck.data
+                });
+                adminNotify('Test Supabase réussi ! Les trois tables répondent correctement.', 'success');
+            } catch (error) {
+                console.error(`${ADMIN_LOG_PREFIX} Test Supabase échoué`, error);
+                adminNotify(`Test Supabase échoué : ${error.message || error}`, 'error');
+            } finally {
+                try {
+                    if (created.passenger?.id) {
+                        await supabase
+                            .from('carpool_passengers')
+                            .delete()
+                            .eq('id', created.passenger.id);
+                    }
+                    if (created.driver?.id) {
+                        await supabase
+                            .from('carpool_drivers')
+                            .delete()
+                            .eq('id', created.driver.id);
+                    }
+                    if (created.trip?.id) {
+                        await supabase
+                            .from('carpool_trips')
+                            .delete()
+                            .eq('id', created.trip.id);
+                    }
+                    adminLog('Nettoyage du test Supabase terminé.', created);
+                } catch (cleanupError) {
+                    console.error(`${ADMIN_LOG_PREFIX} Nettoyage du test Supabase échoué`, cleanupError);
+                }
+
+                if (created.trip?.id) {
+                    await displayCarpoolTrips();
+                }
+            }
+        }
+
+        async function editCarpoolTrip(tripId) {
+            let trip = carpoolTripsCache.find(t => t.id === tripId);
+
+            if (!trip) {
+                const trips = await loadCarpoolTrips();
+                trip = trips.find(t => t.id === tripId);
+            }
+
+            if (!trip) {
+                adminNotify('Sortie covoiturage introuvable.', 'error');
+                return;
+            }
+
+            const titleInput = prompt('Titre de la sortie :', trip.title || '');
+            if (titleInput === null) return;
+            const title = titleInput.trim();
+            if (!title) {
+                adminNotify('Le titre ne peut pas être vide.', 'warning');
+                return;
+            }
+
+            const dateInput = prompt('Date (YYYY-MM-DD) :', trip.date || '');
+            if (dateInput === null) return;
+            const date = dateInput.trim();
+
+            const locationInput = prompt('Lieu :', trip.location || '');
+            if (locationInput === null) return;
+            const location = locationInput.trim();
+
+            const descriptionInput = prompt('Description :', trip.description || '');
+            if (descriptionInput === null) return;
+            const description = descriptionInput.trim();
+
+            adminLog('Mise à jour d\'une sortie covoiturage.', { tripId, title, date, location });
+
+            try {
+                const { error } = await supabase
+                    .from('carpool_trips')
+                    .update({
+                        title,
+                        date: date || null,
+                        location: location || '',
+                        description: description || ''
+                    })
+                    .eq('id', tripId);
+
+                if (error) throw error;
+
+                trip.title = title;
+                trip.date = date || null;
+                trip.location = location || '';
+                trip.description = description || '';
+
+                adminNotify(`Sortie covoiturage "${title}" mise à jour.`, 'success');
+                await displayCarpoolTrips();
+            } catch (error) {
+                console.error(`${ADMIN_LOG_PREFIX} Erreur lors de la mise à jour de la sortie covoiturage`, error);
+                adminNotify('Impossible de modifier la sortie covoiturage. Réessayez plus tard.', 'error');
+            }
+        }
+
+        async function deleteCarpoolTrip(tripId) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer cette sortie covoiturage ?')) {
+                return;
+            }
+
+            adminLog('Suppression d\'une sortie covoiturage.', { tripId });
+
+            try {
+                const { error } = await supabase
+                    .from('carpool_trips')
+                    .delete()
+                    .eq('id', tripId);
+
+                if (error) throw error;
+
+                carpoolTripsCache = carpoolTripsCache.filter(t => t.id !== tripId);
+                adminNotify('Sortie covoiturage supprimée.', 'success');
+                await displayCarpoolTrips();
+            } catch (error) {
+                console.error(`${ADMIN_LOG_PREFIX} Erreur lors de la suppression de la sortie covoiturage`, error);
+                adminNotify('Impossible de supprimer la sortie covoiturage. Réessayez plus tard.', 'error');
+            }
         }
 
         // Charger les paramètres
@@ -1050,9 +1511,9 @@
         }
 
         // Initialisation
-        function init() {
+        async function init() {
             displayTrips();
-            displayCarpoolTrips();
+            await displayCarpoolTrips();
             loadSettings();
             displayTeamsPreview();
             displayWhatsAppDocsPreview();
@@ -1060,7 +1521,11 @@
         }
 
         // Démarrer
-        window.addEventListener('load', init);
+        window.addEventListener('load', () => {
+            init().catch(error => {
+                console.error('Erreur lors de l\'initialisation de la page admin', error);
+            });
+        });
     </script>
 
     <style>

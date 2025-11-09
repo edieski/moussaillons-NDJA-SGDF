@@ -24,6 +24,13 @@
         <!-- Sorties avec covoiturage -->
         <div class="fey-card">
             <div class="fey-card-header">🎯 Sorties avec Covoiturage</div>
+            <div class="carpool-note">
+                Les sorties sont publiées par l'équipe d'animation.
+                Sélectionnez une sortie pour proposer votre voiture ou inscrire votre enfant.
+            </div>
+            <div class="carpool-actions-header">
+                <button class="fey-btn secondary" onclick="refreshCarpoolTrips()">🔄 Actualiser</button>
+            </div>
             <div class="carpool-trips" id="carpoolTrips">
                 <!-- Les sorties covoiturage seront chargées ici -->
             </div>
@@ -51,6 +58,7 @@
                 <div class="passengers-list" id="passengersList">
                     <!-- Liste des passagers -->
                 </div>
+            <button class="fey-btn" onclick="addPassenger()">➕ Ajouter un passager</button>
             </div>
 
             <div class="carpool-actions">
@@ -58,8 +66,71 @@
                 <button class="fey-btn" onclick="exportCarpool()">📤 Exporter</button>
             </div>
         </div>
+
+        <!-- Modal Conducteur -->
+        <div class="carpool-modal" id="driverModal" aria-hidden="true">
+            <div class="carpool-modal-content">
+                <div class="carpool-modal-header">
+                    <h2 id="driverModalTitle">🚗 Nouvelle voiture</h2>
+                    <button class="carpool-modal-close" type="button" data-close-driver>✕</button>
+                </div>
+                <form id="driverForm" class="carpool-form">
+                    <div class="carpool-form-grid">
+                        <label class="carpool-form-field">
+                            <span>Nom du conducteur*</span>
+                            <input type="text" id="driverName" name="name" required autocomplete="name" placeholder="Ex : Marie Dupont">
+                        </label>
+                        <label class="carpool-form-field">
+                            <span>Téléphone</span>
+                            <input type="tel" id="driverPhone" name="phone" autocomplete="tel" placeholder="Ex : 06 12 34 56 78">
+                        </label>
+                        <label class="carpool-form-field">
+                            <span>Modèle de voiture</span>
+                            <input type="text" id="driverCar" name="car" autocomplete="off" placeholder="Ex : Renault Scénic">
+                        </label>
+                        <label class="carpool-form-field">
+                            <span>Places disponibles*</span>
+                            <input type="number" id="driverSeats" name="seats" min="1" max="9" step="1" required value="4">
+                        </label>
+                    </div>
+                    <div class="carpool-modal-actions">
+                        <button type="button" class="fey-btn secondary" data-close-driver>Annuler</button>
+                        <button type="submit" class="fey-btn">💾 Enregistrer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal Passager -->
+        <div class="carpool-modal" id="passengerModal" aria-hidden="true">
+            <div class="carpool-modal-content">
+                <div class="carpool-modal-header">
+                    <h2 id="passengerModalTitle">👦 Ajouter un passager</h2>
+                    <button class="carpool-modal-close" type="button" data-close-passenger>✕</button>
+                </div>
+                <form id="passengerForm" class="carpool-form">
+                    <div class="carpool-form-grid">
+                        <label class="carpool-form-field full-width">
+                            <span>Nom de l'enfant*</span>
+                            <input type="text" id="passengerName" name="name" required autocomplete="off" placeholder="Choisissez dans la liste ou saisissez un nom">
+                        </label>
+                    </div>
+                    <div class="passenger-suggestions" id="passengerSuggestions">
+                        <!-- Suggestions remplies dynamiquement -->
+                    </div>
+                    <div class="carpool-modal-actions">
+                        <button type="button" class="fey-btn secondary" data-close-passenger>Annuler</button>
+                        <button type="submit" class="fey-btn">💾 Enregistrer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
+    <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/supabaseClient.js"></script>
+    <script src="js/equipes.js"></script>
     <script src="js/common.js"></script>
     <script>
         // Navigation
@@ -71,42 +142,353 @@
             }
         }
 
-        // Données des conducteurs
-        const drivers = [
-            { id: 1, name: "Jean Dupont", phone: "06 12 34 56 78", seats: 4, car: "Peugeot 308" },
-            { id: 2, name: "Marie Martin", phone: "06 87 65 43 21", seats: 3, car: "Renault Clio" },
-            { id: 3, name: "Pierre Durand", phone: "06 11 22 33 44", seats: 5, car: "Citroën C4" }
-        ];
-
+        const supabase = window.carpoolSupabase;
+        let carpoolTrips = [];
         let selectedTripId = null;
-        let carpoolData = {};
+        let carpoolData = { drivers: [], passengers: [] };
+        let editingDriverId = null;
+        let editingPassengerId = null;
 
-        // Charger les sorties covoiturage
-        function loadCarpoolTrips() {
-            const saved = localStorage.getItem('carpool-trips');
-            if (saved) {
-                return JSON.parse(saved);
+        const driverModal = document.getElementById('driverModal');
+        const passengerModal = document.getElementById('passengerModal');
+        const driverForm = document.getElementById('driverForm');
+        const passengerForm = document.getElementById('passengerForm');
+        const driverModalTitle = document.getElementById('driverModalTitle');
+        const passengerModalTitle = document.getElementById('passengerModalTitle');
+        const driverNameInput = document.getElementById('driverName');
+        const driverPhoneInput = document.getElementById('driverPhone');
+        const driverCarInput = document.getElementById('driverCar');
+        const driverSeatsInput = document.getElementById('driverSeats');
+        const passengerNameInput = document.getElementById('passengerName');
+        const passengerSuggestionsContainer = document.getElementById('passengerSuggestions');
+
+        const CARPOOL_LOG_PREFIX = '[Covoiturage]';
+
+        function carpoolLog(message, payload) {
+            if (typeof payload !== 'undefined') {
+                console.log(`${CARPOOL_LOG_PREFIX} ${message}`, payload);
+            } else {
+                console.log(`${CARPOOL_LOG_PREFIX} ${message}`);
             }
-            return [];
         }
 
-        // Afficher les sorties covoiturage
-        function displayCarpoolTrips() {
-            const trips = loadCarpoolTrips();
+        function carpoolNotify(message, type = 'info') {
+            if (typeof showNotification === 'function') {
+                showNotification(message, type);
+            } else if (type === 'error') {
+                console.error(`${CARPOOL_LOG_PREFIX} ${message}`);
+            } else if (type === 'warning') {
+                console.warn(`${CARPOOL_LOG_PREFIX} ${message}`);
+            } else {
+                console.log(`${CARPOOL_LOG_PREFIX} ${message}`);
+            }
+        }
+
+        function openDriverModal(driver = null) {
+            if (!driverModal) return;
+            editingDriverId = driver?.id ?? null;
+            driverModalTitle.textContent = editingDriverId ? '✏️ Modifier la voiture' : '🚗 Nouvelle voiture';
+            driverNameInput.value = driver?.name || '';
+            driverPhoneInput.value = driver?.phone || '';
+            driverCarInput.value = driver?.car || '';
+            driverSeatsInput.value = Number.isFinite(driver?.seats_available) ? driver.seats_available : 4;
+            driverModal.setAttribute('aria-hidden', 'false');
+            driverModal.classList.add('visible');
+            driverNameInput.focus();
+        }
+
+        function closeDriverModal() {
+            if (!driverModal) return;
+            driverModal.setAttribute('aria-hidden', 'true');
+            driverModal.classList.remove('visible');
+            driverForm.reset();
+            driverSeatsInput.value = 4;
+            editingDriverId = null;
+        }
+
+        function getKnownPassengerNames() {
+            const names = new Set();
+            try {
+                if (typeof getAllLifeTeamMembers === 'function') {
+                    getAllLifeTeamMembers().forEach(name => {
+                        if (name) names.add(name.trim());
+                    });
+                }
+                if (typeof getAllNightTeamMembers === 'function') {
+                    getAllNightTeamMembers().forEach(name => {
+                        if (name) names.add(name.trim());
+                    });
+                }
+            } catch (error) {
+                console.warn(`${CARPOOL_LOG_PREFIX} Impossible de récupérer la liste des scouts`, error);
+            }
+            return Array.from(names).filter(Boolean).sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
+        }
+
+        function populatePassengerSuggestions(currentName = '') {
+            if (!passengerSuggestionsContainer) return;
+
+            const suggestions = getKnownPassengerNames().filter(name => {
+                if (currentName && name.toLowerCase() === currentName.toLowerCase()) {
+                    return true;
+                }
+                return !carpoolData.passengers.some(passenger => (passenger.name || '').toLowerCase() === name.toLowerCase());
+            });
+
+            if (!suggestions.length) {
+                passengerSuggestionsContainer.innerHTML = '<div class="fey-note">Aucun nom suggéré pour le moment. Saisissez simplement un nom.</div>';
+                return;
+            }
+
+            passengerSuggestionsContainer.innerHTML = suggestions.map(name => `
+                <button type="button" class="suggestion-chip" data-passenger-name="${name.replace(/"/g, '&quot;')}">${name}</button>
+            `).join('');
+
+            passengerSuggestionsContainer.querySelectorAll('[data-passenger-name]').forEach(button => {
+                button.addEventListener('click', () => {
+                    passengerNameInput.value = button.dataset.passengerName || '';
+                    passengerNameInput.focus();
+                });
+            });
+        }
+
+        function openPassengerModal(passenger = null) {
+            if (!passengerModal) return;
+            editingPassengerId = passenger?.id ?? null;
+            const existingName = passenger?.name || '';
+            passengerModalTitle.textContent = editingPassengerId ? '✏️ Modifier le passager' : '👦 Ajouter un passager';
+            passengerNameInput.value = existingName;
+            passengerModal.setAttribute('aria-hidden', 'false');
+            passengerModal.classList.add('visible');
+            populatePassengerSuggestions(existingName);
+            passengerNameInput.focus();
+        }
+
+        function closePassengerModal() {
+            if (!passengerModal) return;
+            passengerModal.setAttribute('aria-hidden', 'true');
+            passengerModal.classList.remove('visible');
+            passengerForm.reset();
+            populatePassengerSuggestions();
+            editingPassengerId = null;
+        }
+
+        async function handleDriverFormSubmit(event) {
+            event.preventDefault();
+
+            if (!selectedTripId) {
+                carpoolNotify('Veuillez sélectionner une sortie avant d\'enregistrer une voiture.', 'warning');
+                return;
+            }
+
+            if (!supabase) {
+                carpoolNotify('Configuration Supabase manquante. Impossible d\'enregistrer la voiture.', 'error');
+                return;
+            }
+
+            const name = driverNameInput.value.trim();
+            const phone = driverPhoneInput.value.trim();
+            const car = driverCarInput.value.trim();
+            const seats = parseInt(driverSeatsInput.value, 10);
+
+            if (!name) {
+                carpoolNotify('Le nom du conducteur est obligatoire.', 'warning');
+                driverNameInput.focus();
+                return;
+            }
+
+            if (!Number.isFinite(seats) || seats <= 0) {
+                carpoolNotify('Indiquez le nombre de places disponibles.', 'warning');
+                driverSeatsInput.focus();
+                return;
+            }
+
+            const payload = {
+                name,
+                phone,
+                car,
+                seats_available: seats
+            };
+
+            try {
+                if (editingDriverId) {
+                    const { error } = await supabase
+                        .from('carpool_drivers')
+                        .update(payload)
+                        .eq('id', editingDriverId);
+
+                    if (error) throw error;
+                    carpoolNotify(`Voiture "${name}" mise à jour.`, 'success');
+                } else {
+                    const { data, error } = await supabase
+                        .from('carpool_drivers')
+                        .insert({
+                            ...payload,
+                            trip_id: selectedTripId
+                        })
+                        .select()
+                        .single();
+
+                    if (error) throw error;
+                    carpoolNotify(`Voiture "${data.name}" ajoutée.`, 'success');
+                }
+
+                await loadCarpoolData();
+                displayDrivers();
+                displayPassengers();
+                closeDriverModal();
+            } catch (error) {
+                console.error('Erreur lors de la sauvegarde du conducteur', error);
+                carpoolNotify(`Impossible d'enregistrer la voiture (${error.message || 'erreur inconnue'}).`, 'error');
+            }
+        }
+
+        async function handlePassengerFormSubmit(event) {
+            event.preventDefault();
+
+            if (!selectedTripId) {
+                carpoolNotify('Veuillez sélectionner une sortie avant d\'inscrire un passager.', 'warning');
+                return;
+            }
+
+            if (!supabase) {
+                carpoolNotify('Configuration Supabase manquante. Impossible d\'enregistrer le passager.', 'error');
+                return;
+            }
+
+            const name = passengerNameInput.value.trim();
+            if (!name) {
+                carpoolNotify('Le nom du passager est obligatoire.', 'warning');
+                passengerNameInput.focus();
+                return;
+            }
+
+            try {
+                if (editingPassengerId) {
+                    const { error } = await supabase
+                        .from('carpool_passengers')
+                        .update({ name })
+                        .eq('id', editingPassengerId);
+
+                    if (error) throw error;
+                    carpoolNotify(`Passager "${name}" mis à jour.`, 'success');
+                } else {
+                    const { data, error } = await supabase
+                        .from('carpool_passengers')
+                        .insert({
+                            trip_id: selectedTripId,
+                            name
+                        })
+                        .select()
+                        .single();
+
+                    if (error) throw error;
+                    carpoolNotify(`Passager "${data.name}" ajouté.`, 'success');
+                }
+
+                await loadCarpoolData();
+                displayPassengers();
+                displayDrivers();
+                closePassengerModal();
+            } catch (error) {
+                console.error('Erreur lors de la sauvegarde du passager', error);
+                carpoolNotify(`Impossible d'enregistrer le passager (${error.message || 'erreur inconnue'}).`, 'error');
+            }
+        }
+
+        if (driverForm) {
+            driverForm.addEventListener('submit', handleDriverFormSubmit);
+        }
+        if (passengerForm) {
+            passengerForm.addEventListener('submit', handlePassengerFormSubmit);
+        }
+
+        document.querySelectorAll('[data-close-driver]').forEach(button => {
+            button.addEventListener('click', closeDriverModal);
+        });
+
+        document.querySelectorAll('[data-close-passenger]').forEach(button => {
+            button.addEventListener('click', closePassengerModal);
+        });
+
+        if (driverModal) {
+            driverModal.addEventListener('click', event => {
+                if (event.target === driverModal) {
+                    closeDriverModal();
+                }
+            });
+        }
+
+        if (passengerModal) {
+            passengerModal.addEventListener('click', event => {
+                if (event.target === passengerModal) {
+                    closePassengerModal();
+                }
+            });
+        }
+
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape') {
+                if (driverModal?.classList.contains('visible')) {
+                    closeDriverModal();
+                }
+                if (passengerModal?.classList.contains('visible')) {
+                    closePassengerModal();
+                }
+            }
+        });
+
+        populatePassengerSuggestions();
+
+        const normalizeId = (value) => value != null ? String(value) : null;
+        function sameId(a, b) {
+            return normalizeId(a) === normalizeId(b);
+        }
+
+        if (!supabase) {
+            console.error('Supabase client non initialisé');
+        }
+
+        async function displayCarpoolTrips() {
             const container = document.getElementById('carpoolTrips');
-            
-            if (trips.length === 0) {
+            container.innerHTML = '<div class="fey-note">Chargement des sorties...</div>';
+
+            if (!supabase) {
+                container.innerHTML = '<div class="fey-note danger">Configuration Supabase manquante.</div>';
+                carpoolNotify('Configuration Supabase manquante. Impossible de charger les sorties.', 'error');
+                return;
+            }
+
+            carpoolLog('Chargement des sorties covoiturage depuis Supabase...');
+
+            const { data, error } = await supabase
+                .from('carpool_trips')
+                .select('*')
+                .order('date', { ascending: true })
+                .order('created_at', { ascending: true });
+
+            if (error) {
+                console.error('Erreur de chargement des sorties covoiturage', error);
+                container.innerHTML = '<div class="fey-note danger">Impossible de charger les sorties. Réessayez plus tard.</div>';
+                carpoolNotify(`Erreur lors du chargement des sorties (${error.message || 'inconnue'}).`, 'error');
+                return;
+            }
+
+            carpoolTrips = data || [];
+            carpoolLog(`Sorties covoiturage reçues (${carpoolTrips.length}).`, carpoolTrips);
+
+            if (!carpoolTrips.length) {
                 container.innerHTML = '<div class="fey-note">Aucune sortie covoiturage enregistrée. Activez le covoiturage dans la section Admin.</div>';
                 return;
             }
 
-            const html = trips.map(trip => `
-                <div class="carpool-trip-item" onclick="selectCarpoolTrip(${trip.id})">
+            container.innerHTML = carpoolTrips.map(trip => `
+                <div class="carpool-trip-item" data-trip-id="${normalizeId(trip.id)?.replace(/"/g, '&quot;') || ''}">
                     <div class="trip-info">
                         <div class="trip-title">${trip.title}</div>
-                        <div class="trip-date">📅 ${new Date(trip.date).toLocaleDateString('fr-FR')}</div>
-                        <div class="trip-location">📍 ${trip.location}</div>
-                        <div class="trip-description">${trip.description}</div>
+                        <div class="trip-date">📅 ${trip.date ? new Date(trip.date).toLocaleDateString('fr-FR') : 'Date à définir'}</div>
+                        <div class="trip-location">📍 ${trip.location || 'Lieu à définir'}</div>
+                        <div class="trip-description">${trip.description || ''}</div>
                     </div>
                     <div class="trip-status">
                         <div class="status-indicator">🚗</div>
@@ -115,212 +497,369 @@
                 </div>
             `).join('');
 
-            container.innerHTML = html;
+            container.querySelectorAll('.carpool-trip-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    selectCarpoolTrip(item.dataset.tripId);
+                });
+            });
         }
 
-        // Sélectionner une sortie covoiturage
-        function selectCarpoolTrip(tripId) {
-            selectedTripId = tripId;
-            const trips = loadCarpoolTrips();
-            const trip = trips.find(t => t.id === tripId);
-            
+        async function refreshCarpoolTrips() {
+            await displayCarpoolTrips();
+            if (selectedTripId) {
+                await selectCarpoolTrip(selectedTripId);
+            }
+        }
+
+        async function selectCarpoolTrip(tripId) {
+            const trip = carpoolTrips.find(t => sameId(t.id, tripId));
+
             if (trip) {
+                selectedTripId = trip.id;
+                carpoolLog('Sortie sélectionnée.', trip);
                 document.getElementById('selectedTripInfo').innerHTML = `
                     <div class="trip-title">${trip.title}</div>
-                    <div class="trip-date">📅 ${new Date(trip.date).toLocaleDateString('fr-FR')}</div>
-                    <div class="trip-location">📍 ${trip.location}</div>
+                    <div class="trip-date">📅 ${trip.date ? new Date(trip.date).toLocaleDateString('fr-FR') : 'Date à définir'}</div>
+                    <div class="trip-location">📍 ${trip.location || 'Lieu à définir'}</div>
                 `;
-                
+
                 document.getElementById('carpoolManagement').style.display = 'block';
-                
-                loadCarpoolData();
+
+                document.getElementById('driversList').innerHTML = '<div class="fey-note">Chargement des conducteurs...</div>';
+                document.getElementById('passengersList').innerHTML = '<div class="fey-note">Chargement des passagers...</div>';
+
+                await loadCarpoolData();
                 displayDrivers();
                 displayPassengers();
             }
         }
 
-        // Charger les données de covoiturage
-        function loadCarpoolData() {
-            const saved = localStorage.getItem(`carpool-${selectedTripId}`);
-            if (saved) {
-                carpoolData = JSON.parse(saved);
-            } else {
-                carpoolData = {
-                    drivers: [],
-                    passengers: []
-                };
+        async function loadCarpoolData() {
+            if (!selectedTripId || !supabase) {
+                if (!supabase) {
+                    carpoolNotify('Configuration Supabase manquante. Impossible de charger les conducteurs et passagers.', 'error');
+                }
+                return;
             }
+
+            const [{ data: drivers, error: driversError }, { data: passengers, error: passengersError }] = await Promise.all([
+                supabase
+                    .from('carpool_drivers')
+                    .select('*')
+                    .eq('trip_id', selectedTripId)
+                    .order('created_at', { ascending: true }),
+                supabase
+                    .from('carpool_passengers')
+                    .select('*')
+                    .eq('trip_id', selectedTripId)
+                    .order('created_at', { ascending: true })
+            ]);
+
+            if (driversError || passengersError) {
+                console.error('Erreur de chargement du covoiturage', driversError || passengersError);
+                const reason = driversError?.message || passengersError?.message || 'inconnue';
+                carpoolNotify(`Impossible de charger les données du covoiturage (${reason}).`, 'error');
+                document.getElementById('driversList').innerHTML = '<div class="fey-note danger">Erreur de chargement des conducteurs.</div>';
+                document.getElementById('passengersList').innerHTML = '<div class="fey-note danger">Erreur de chargement des passagers.</div>';
+                return;
+            }
+
+            carpoolData = {
+                drivers: drivers || [],
+                passengers: passengers || []
+            };
+            carpoolLog('Données covoiturage chargées.', carpoolData);
         }
 
-        // Afficher les conducteurs
         function displayDrivers() {
             const container = document.getElementById('driversList');
-            
-            if (carpoolData.drivers.length === 0) {
+            carpoolLog(`Affichage de ${carpoolData.drivers.length} conducteur(s).`, carpoolData.drivers);
+
+            if (!carpoolData.drivers.length) {
                 container.innerHTML = '<div class="fey-note">Aucun conducteur enregistré.</div>';
                 return;
             }
 
-            const html = carpoolData.drivers.map(driver => `
+            container.innerHTML = carpoolData.drivers.map(driver => {
+                const seats = driver.seats_available || 0;
+                const remaining = getRemainingSeats(driver);
+                const seatLabel = seats
+                    ? `💺 ${seats} places • ${Math.max(remaining, 0)} dispo`
+                    : '💺 Capacités non renseignées';
+
+                return `
                 <div class="driver-item">
                     <div class="driver-info">
                         <div class="driver-name">${driver.name}</div>
                         <div class="driver-details">
-                            <span>📱 ${driver.phone}</span>
-                            <span>🚗 ${driver.car}</span>
-                            <span>💺 ${driver.seats} places</span>
+                            <span>📱 ${driver.phone || 'Non renseigné'}</span>
+                            <span>🚗 ${driver.car || 'Non renseigné'}</span>
+                            <span>${seatLabel}</span>
                         </div>
                     </div>
                     <div class="driver-actions">
-                        <button class="fey-btn-small" onclick="editDriver(${driver.id})">✏️</button>
-                        <button class="fey-btn-small danger" onclick="removeDriver(${driver.id})">🗑️</button>
+                        <button class="fey-btn-small" data-action="edit-driver" data-driver-id="${normalizeId(driver.id)?.replace(/"/g, '&quot;') || ''}">✏️</button>
+                        <button class="fey-btn-small danger" data-action="remove-driver" data-driver-id="${normalizeId(driver.id)?.replace(/"/g, '&quot;') || ''}">🗑️</button>
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
 
-            container.innerHTML = html;
+            container.querySelectorAll('[data-action="edit-driver"]').forEach(button => {
+                button.addEventListener('click', event => {
+                    event.stopPropagation();
+                    editDriver(button.dataset.driverId);
+                });
+            });
+
+            container.querySelectorAll('[data-action="remove-driver"]').forEach(button => {
+                button.addEventListener('click', event => {
+                    event.stopPropagation();
+                    removeDriver(button.dataset.driverId);
+                });
+            });
         }
 
-        // Afficher les passagers
         function displayPassengers() {
             const container = document.getElementById('passengersList');
-            
-            if (carpoolData.passengers.length === 0) {
+            carpoolLog(`Affichage de ${carpoolData.passengers.length} passager(s).`, carpoolData.passengers);
+
+            if (!carpoolData.passengers.length) {
                 container.innerHTML = '<div class="fey-note">Aucun passager enregistré.</div>';
                 return;
             }
 
-            const html = carpoolData.passengers.map(passenger => `
+            container.innerHTML = carpoolData.passengers.map(passenger => `
                 <div class="passenger-item">
                     <div class="passenger-info">
                         <div class="passenger-name">${passenger.name}</div>
-                        <div class="passenger-driver">Avec: ${passenger.driverName || 'Non assigné'}</div>
+                        <div class="passenger-driver">Avec: ${getDriverName(passenger.driver_id) || 'Non assigné'}</div>
                     </div>
                     <div class="passenger-actions">
-                        <button class="fey-btn-small" onclick="assignPassenger(${passenger.id})">👥 Assigner</button>
-                        <button class="fey-btn-small danger" onclick="removePassenger(${passenger.id})">🗑️</button>
+                        <button class="fey-btn-small" data-action="edit-passenger" data-passenger-id="${normalizeId(passenger.id)?.replace(/"/g, '&quot;') || ''}">✏️</button>
+                        <button class="fey-btn-small" data-action="assign-passenger" data-passenger-id="${normalizeId(passenger.id)?.replace(/"/g, '&quot;') || ''}">👥 Assigner</button>
+                        <button class="fey-btn-small danger" data-action="remove-passenger" data-passenger-id="${normalizeId(passenger.id)?.replace(/"/g, '&quot;') || ''}">🗑️</button>
                     </div>
                 </div>
             `).join('');
 
-            container.innerHTML = html;
+            container.querySelectorAll('[data-action="edit-passenger"]').forEach(button => {
+                button.addEventListener('click', event => {
+                    event.stopPropagation();
+                    editPassenger(button.dataset.passengerId);
+                });
+            });
+
+            container.querySelectorAll('[data-action="assign-passenger"]').forEach(button => {
+                button.addEventListener('click', event => {
+                    event.stopPropagation();
+                    assignPassenger(button.dataset.passengerId);
+                });
+            });
+
+            container.querySelectorAll('[data-action="remove-passenger"]').forEach(button => {
+                button.addEventListener('click', event => {
+                    event.stopPropagation();
+                    removePassenger(button.dataset.passengerId);
+                });
+            });
         }
 
-        // Ajouter un conducteur
-        function addDriver() {
-            const name = prompt('Nom du conducteur :');
-            if (!name) return;
-            
-            const phone = prompt('Téléphone :');
-            const car = prompt('Modèle de voiture :');
-            const seats = parseInt(prompt('Nombre de places disponibles :')) || 4;
-            
-            const newDriver = {
-                id: Date.now(),
-                name,
-                phone: phone || '',
-                car: car || '',
-                seats
-            };
-            
-            carpoolData.drivers.push(newDriver);
-            displayDrivers();
-        }
-
-        // Éditer un conducteur
-        function editDriver(driverId) {
-            const driver = carpoolData.drivers.find(d => d.id === driverId);
-            if (!driver) return;
-            
-            const name = prompt('Nom du conducteur :', driver.name);
-            if (name === null) return;
-            
-            const phone = prompt('Téléphone :', driver.phone);
-            const car = prompt('Modèle de voiture :', driver.car);
-            const seats = parseInt(prompt('Nombre de places disponibles :', driver.seats)) || 4;
-            
-            driver.name = name;
-            driver.phone = phone || '';
-            driver.car = car || '';
-            driver.seats = seats;
-            
-            displayDrivers();
-        }
-
-        // Supprimer un conducteur
-        function removeDriver(driverId) {
-            if (confirm('Êtes-vous sûr de vouloir supprimer ce conducteur ?')) {
-                carpoolData.drivers = carpoolData.drivers.filter(d => d.id !== driverId);
-                displayDrivers();
-            }
-        }
-
-        // Assigner un passager
-        function assignPassenger(passengerId) {
-            const passenger = carpoolData.passengers.find(p => p.id === passengerId);
-            if (!passenger) return;
-            
-            const availableDrivers = carpoolData.drivers.filter(d => d.seats > 0);
-            if (availableDrivers.length === 0) {
-                alert('Aucun conducteur disponible.');
+        async function editPassenger(passengerId) {
+            const passenger = carpoolData.passengers.find(p => sameId(p.id, passengerId));
+            if (!passenger) {
+                carpoolNotify('Passager introuvable.', 'warning');
                 return;
             }
-            
-            const driverNames = availableDrivers.map(d => d.name).join('\n');
+            openPassengerModal(passenger);
+        }
+
+        async function addDriver() {
+            if (!selectedTripId) {
+                carpoolNotify('Veuillez sélectionner une sortie avant d\'ajouter un conducteur.', 'warning');
+                return;
+            }
+
+            openDriverModal();
+        }
+
+        async function editDriver(driverId) {
+            const driver = carpoolData.drivers.find(d => sameId(d.id, driverId));
+            if (!driver) return;
+            openDriverModal(driver);
+        }
+
+        async function removeDriver(driverId) {
+            const driver = carpoolData.drivers.find(d => sameId(d.id, driverId));
+            if (!driver) {
+                carpoolNotify('Conducteur introuvable.', 'warning');
+                return;
+            }
+
+            if (!confirm(`Êtes-vous sûr de vouloir supprimer ${driver.name || 'ce conducteur'} ?`)) {
+                return;
+            }
+
+            const { error } = await supabase
+                .from('carpool_drivers')
+                .delete()
+                .eq('id', driver.id);
+
+            if (error) {
+                console.error('Erreur lors de la suppression du conducteur', error);
+                carpoolNotify(`Impossible de supprimer le conducteur (${error.message || 'erreur inconnue'}).`, 'error');
+                return;
+            }
+
+            carpoolData.drivers = carpoolData.drivers.filter(d => !sameId(d.id, driverId));
+            await loadCarpoolData();
+            displayDrivers();
+            displayPassengers();
+            carpoolNotify(`Conducteur "${driver.name}" supprimé.`, 'success');
+            carpoolLog('Conducteur supprimé.', driver);
+        }
+
+        async function addPassenger() {
+            if (!selectedTripId) {
+                carpoolNotify('Veuillez sélectionner une sortie avant d\'ajouter un passager.', 'warning');
+                return;
+            }
+
+            openPassengerModal();
+        }
+
+        async function assignPassenger(passengerId) {
+            const passenger = carpoolData.passengers.find(p => sameId(p.id, passengerId));
+            if (!passenger) {
+                carpoolNotify('Passager introuvable.', 'warning');
+                return;
+            }
+
+            const availableDrivers = carpoolData.drivers.filter(d => getRemainingSeats(d) > 0);
+            if (!availableDrivers.length) {
+                carpoolNotify('Aucun conducteur disponible pour ce passager.', 'warning');
+                return;
+            }
+
+            const driverNames = availableDrivers
+                .map(d => `${d.name} (${getRemainingSeats(d)} places restantes)`)
+                .join('\n');
+
             const selectedDriver = prompt(`Conducteurs disponibles :\n${driverNames}\n\nNom du conducteur :`);
-            
-            if (selectedDriver) {
-                const driver = availableDrivers.find(d => d.name === selectedDriver);
-                if (driver) {
-                    passenger.driverName = driver.name;
-                    passenger.driverId = driver.id;
-                    driver.seats--;
-                    displayPassengers();
-                    displayDrivers();
-                }
+            if (!selectedDriver) return;
+
+            const normalizedInput = selectedDriver.split('(')[0].trim().toLowerCase();
+            const driver = availableDrivers.find(d => (d.name || '').toLowerCase() === normalizedInput);
+            if (!driver) {
+                carpoolNotify('Conducteur introuvable. Vérifiez l’orthographe.', 'warning');
+                return;
+            }
+
+            const success = await linkPassengerToDriver(passengerId, driver.id);
+            if (success) {
+                carpoolNotify(`Passager "${passenger.name}" assigné à ${driver.name}.`, 'success');
             }
         }
 
-        // Supprimer un passager
-        function removePassenger(passengerId) {
-            if (confirm('Êtes-vous sûr de vouloir supprimer ce passager ?')) {
-                carpoolData.passengers = carpoolData.passengers.filter(p => p.id !== passengerId);
+        async function linkPassengerToDriver(passengerId, driverId) {
+            const passenger = carpoolData.passengers.find(p => sameId(p.id, passengerId));
+            if (!passenger) {
+                carpoolNotify('Passager introuvable pour l’assignation.', 'warning');
+                return false;
+            }
+
+            try {
+                const { error } = await supabase
+                    .from('carpool_passengers')
+                    .update({ driver_id: driverId })
+                    .eq('id', passenger.id);
+
+                if (error) throw error;
+
+                passenger.driver_id = driverId;
                 displayPassengers();
+                displayDrivers();
+                carpoolLog('Passager assigné à un conducteur.', { passengerId, driverId });
+                return true;
+            } catch (error) {
+                console.error('Erreur lors de l\'assignation du passager', error);
+                carpoolNotify(`Impossible d'assigner ce passager (${error.message || 'erreur inconnue'}).`, 'error');
+                return false;
             }
         }
 
-        // Sauvegarder le covoiturage
+        async function removePassenger(passengerId) {
+            const passenger = carpoolData.passengers.find(p => sameId(p.id, passengerId));
+            if (!passenger) {
+                carpoolNotify('Passager introuvable.', 'warning');
+                return;
+            }
+
+            if (!confirm(`Êtes-vous sûr de vouloir supprimer ${passenger.name || 'ce passager'} ?`)) {
+                return;
+            }
+
+            const { error } = await supabase
+                .from('carpool_passengers')
+                .delete()
+                .eq('id', passenger.id);
+
+            if (error) {
+                console.error('Erreur lors de la suppression du passager', error);
+                carpoolNotify(`Impossible de supprimer le passager (${error.message || 'erreur inconnue'}).`, 'error');
+                return;
+            }
+
+            carpoolData.passengers = carpoolData.passengers.filter(p => !sameId(p.id, passengerId));
+            displayPassengers();
+            displayDrivers();
+            carpoolNotify(`Passager "${passenger.name}" supprimé.`, 'success');
+            carpoolLog('Passager supprimé.', passenger);
+        }
+
         function saveCarpool() {
             if (!selectedTripId) {
-                alert('Veuillez d\'abord sélectionner une sortie.');
+                carpoolNotify('Veuillez sélectionner une sortie avant de sauvegarder.', 'warning');
                 return;
             }
-            
-            localStorage.setItem(`carpool-${selectedTripId}`, JSON.stringify(carpoolData));
-            alert('Covoiturage sauvegardé !');
+
+            carpoolNotify('Les données sont automatiquement sauvegardées.', 'info');
         }
 
-        // Exporter le covoiturage
-        function exportCarpool() {
+        async function exportCarpool() {
             if (!selectedTripId) {
-                alert('Veuillez d\'abord sélectionner une sortie.');
+                carpoolNotify('Veuillez sélectionner une sortie avant d’exporter.', 'warning');
                 return;
             }
-            
-            const trips = loadCarpoolTrips();
-            const trip = trips.find(t => t.id === selectedTripId);
-            
+
+            const trip = carpoolTrips.find(t => sameId(t.id, selectedTripId));
             if (!trip) {
-                alert('Sortie non trouvée.');
+                carpoolNotify('Sortie introuvable pour l’export.', 'error');
                 return;
             }
-            
+
+            await loadCarpoolData();
+
             const csvContent = [
                 ['Type', 'Nom', 'Téléphone', 'Voiture', 'Places', 'Conducteur assigné'],
-                ...carpoolData.drivers.map(driver => ['Conducteur', driver.name, driver.phone, driver.car, driver.seats, '']),
-                ...carpoolData.passengers.map(passenger => ['Passager', passenger.name, '', '', '', passenger.driverName || 'Non assigné'])
+                ...carpoolData.drivers.map(driver => [
+                    'Conducteur',
+                    driver.name,
+                    driver.phone || '',
+                    driver.car || '',
+                    driver.seats_available || '',
+                    ''
+                ]),
+                ...carpoolData.passengers.map(passenger => [
+                    'Passager',
+                    passenger.name,
+                    '',
+                    '',
+                    '',
+                    getDriverName(passenger.driver_id) || 'Non assigné'
+                ])
             ].map(row => row.join(',')).join('\n');
-            
+
             const blob = new Blob([csvContent], { type: 'text/csv' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -328,15 +867,36 @@
             a.download = `covoiturage-${trip.title}-${new Date().toISOString().split('T')[0]}.csv`;
             a.click();
             window.URL.revokeObjectURL(url);
+            carpoolNotify('Export CSV généré.', 'success');
         }
 
-        // Initialisation
-        function init() {
-            displayCarpoolTrips();
+        function getDriverName(driverId) {
+            if (!driverId) return null;
+            const driver = carpoolData.drivers.find(d => sameId(d.id, driverId));
+            return driver ? driver.name : null;
         }
 
-        // Démarrer
-        window.addEventListener('load', init);
+        function getRemainingSeats(driver) {
+            const seats = driver.seats_available || 0;
+            if (!seats) return 0;
+            const assigned = carpoolData.passengers.filter(p => sameId(p.driver_id, driver.id)).length;
+            return seats - assigned;
+        }
+
+        async function init() {
+            carpoolLog('Initialisation de la page covoiturage.');
+            await displayCarpoolTrips();
+            if (carpoolTrips.length) {
+                await selectCarpoolTrip(carpoolTrips[0].id);
+            }
+        }
+
+        window.addEventListener('load', () => {
+            init().catch(err => {
+                console.error('Erreur d\'initialisation de la page covoiturage', err);
+                carpoolNotify(`Erreur d'initialisation (${err.message || 'inconnue'}).`, 'error');
+            });
+        });
     </script>
 
     <style>
@@ -495,6 +1055,180 @@
             display: flex;
             gap: 0.5rem;
         }
+
+        .carpool-note {
+            background: #f1f8e9;
+            color: #2e7d32;
+            border: 2px solid #2e7d32;
+            border-radius: var(--r-sm);
+            padding: 0.75rem 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+        }
+
+        .carpool-actions-header {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .fey-btn.secondary {
+            background: white;
+            color: var(--c-ink-900);
+            border: 2px solid var(--c-ink-900);
+        }
+
+        .fey-btn.secondary:hover {
+            background: var(--c-ink-900);
+            color: white;
+        }
+
+        .carpool-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.65);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem;
+            z-index: 2000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .carpool-modal.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .carpool-modal-content {
+            background: white;
+            border-radius: var(--r-md);
+            border: 3px solid var(--c-ink-900);
+            box-shadow: 8px 12px 0 rgba(0, 0, 0, 0.25);
+            padding: 1.5rem;
+            max-width: 520px;
+            width: min(520px, 95vw);
+            position: relative;
+        }
+
+        .carpool-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .carpool-modal-header h2 {
+            margin: 0;
+            font-size: 1.35rem;
+            color: var(--c-ink-900);
+        }
+
+        .carpool-modal-close {
+            border: none;
+            background: transparent;
+            font-size: 1.25rem;
+            cursor: pointer;
+            color: var(--c-ink-900);
+        }
+
+        .carpool-modal-close:hover {
+            color: #d32f2f;
+        }
+
+        .carpool-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .carpool-form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+        }
+
+        .carpool-form-field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            font-size: 0.95rem;
+        }
+
+        .carpool-form-field.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .carpool-form-field span {
+            font-weight: 600;
+            color: var(--c-ink-900);
+        }
+
+        .carpool-form-field input {
+            border: 2px solid var(--c-ink-900);
+            border-radius: var(--r-sm);
+            padding: 0.65rem 0.75rem;
+            font-size: 0.95rem;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .carpool-form-field input:focus {
+            outline: none;
+            border-color: #2e7d32;
+            box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.2);
+        }
+
+        .carpool-modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+        }
+
+        .passenger-suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .suggestion-chip {
+            border: 2px solid var(--c-ink-900);
+            background: white;
+            border-radius: 999px;
+            padding: 0.35rem 0.75rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .suggestion-chip:hover {
+            background: var(--c-ink-900);
+            color: white;
+        }
+
+        @media (max-width: 600px) {
+            .carpool-modal-content {
+                padding: 1.25rem;
+            }
+
+            .carpool-form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .carpool-modal-actions {
+                flex-direction: column-reverse;
+            }
+
+            .carpool-modal-actions .fey-btn,
+            .carpool-modal-actions .fey-btn.secondary {
+                width: 100%;
+                text-align: center;
+            }
+        }
     </style>
 </body>
 </html>
+
