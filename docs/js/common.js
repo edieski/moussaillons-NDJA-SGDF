@@ -131,17 +131,23 @@ function showNotification(message, type = 'info') {
 function checkSession() {
     const isLoggedIn = sessionStorage.getItem(SESSION_KEY) === 'true';
     const isAdmin = sessionStorage.getItem('admin_mode') === 'true';
-    
+
+    const loginEl = document.getElementById('loginPage');
+    const mainEl = document.getElementById('mainContent');
+    // If this page doesn't have the login layout, skip session UI handling
+    if (!loginEl || !mainEl) {
+        return;
+    }
+
     if (isLoggedIn) {
-        document.getElementById('loginPage').style.display = 'none';
-        document.getElementById('mainContent').style.display = 'block';
-        
-        if (isAdmin) {
-            enableAdminMode();
+        loginEl.style.display = 'none';
+        mainEl.style.display = 'block';
+        if (isAdmin && typeof enableAdminMode === 'function') {
+            try { enableAdminMode(); } catch (e) {}
         }
     } else {
-        document.getElementById('loginPage').style.display = 'block';
-        document.getElementById('mainContent').style.display = 'none';
+        loginEl.style.display = 'block';
+        mainEl.style.display = 'none';
     }
 }
 
@@ -160,8 +166,10 @@ function initAnimations() {
 
 // Fonction de gestion des erreurs globales
 window.addEventListener('error', function(event) {
-    console.error('Erreur JavaScript:', event.error);
-    showNotification('Une erreur inattendue s\'est produite', 'error');
+    try {
+        console.error('Erreur JavaScript:', event.error);
+        showNotification('Une erreur inattendue s\'est produite', 'error');
+    } catch (_) {}
 });
 
 // Fonction de vérification de la disponibilité du localStorage
@@ -179,9 +187,9 @@ function checkLocalStorage() {
 
 // Initialisation au chargement de la page
 document.addEventListener('DOMContentLoaded', function() {
-    checkLocalStorage();
-    checkSession();
-    initAnimations();
+    try { checkLocalStorage(); } catch (_) {}
+    try { checkSession(); } catch (_) {}
+    try { initAnimations(); } catch (_) {}
 });
 
 // Ajout des animations CSS pour les notifications

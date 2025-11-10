@@ -106,7 +106,7 @@ const fileMap = {
   marin: 'docs/marin.html',
   loi: 'docs/loi.html',
   admin: 'docs/admin.html',
-  registre: 'docs/registre.html'
+  // registre page is integrated into index.html; no separate file generated
 };
 
 const scriptImportsHtml = scriptImports.join('\n');

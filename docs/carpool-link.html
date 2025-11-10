@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚗 Covoiturage Scout</title>
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+    <!-- Contenu principal avec menu -->
+    <div class="fey-container" style="display: block;">
+        <h1 class="fey-title">🌲 Mon carnet d'aventure 🌲</h1>
+        <p class="fey-subtitle">Prochaine sortie à Jambville · Octobre 2025</p>
+
+        <nav class="fey-nav">
+            <button class="fey-tab" onclick="window.location.href='index.html'">🏠 Accueil</button>
+            <button class="fey-tab" onclick="window.location.href='index.html'">📋 Ma Liste</button>
+            <button class="fey-tab" onclick="window.location.href='index.html#tente'">⛺ La Tente</button>
+            <button class="fey-tab" onclick="window.location.href='index.html#infos'">📱 Infos</button>
+            <button class="fey-tab" onclick="window.location.href='index.html#equipes'">👥 Équipes</button>
+            <button class="fey-tab" onclick="window.location.href='index.html#calendrier'">📅 Calendrier</button>
+            <button class="fey-tab active" onclick="window.location.href='carpool-link.html'">🚗 Covoiturage</button>
+            <button class="fey-tab" onclick="window.location.href='presence.html'">📋 Présence</button>
+            <button class="fey-tab" onclick="window.location.href='index.html#chansons'">🎵 Chansons</button>
+            <button class="fey-tab" onclick="window.location.href='index.html#marin'">⚓ Marin</button>
+            <button class="fey-tab" onclick="window.location.href='index.html#loi'">📜 Loi Scout</button>
+        </nav>
+    </div>
+
+    <!-- Conteneur principal -->
+    <div id="covoiturage" class="fey-page" style="display: block; padding: 2rem; max-width: 1200px; margin: 0 auto;">
+
+        <div class="fey-card-header" style="text-align: center; margin-bottom: 2rem; font-size: 2rem;">
+            🚗 Covoiturage Scout
+        </div>
+
+        <!-- Sélection de sortie -->
+        <div class="fey-card" id="carpoolSelectCard">
+            <div class="fey-card-header">📅 Choisir la Sortie</div>
+            <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem;">
+                <select id="carpoolOutingSelect" style="flex: 1; padding: 0.75rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm); font-size: 1rem;" onchange="updateOutingQueryParam()">
+                    <option value="">Choisir une sortie...</option>
+                </select>
+                <button id="carpoolRefreshButton" class="fey-btn" style="background: #4CAF50; padding: 0.75rem 1.5rem;">
+                    🔄 Actualiser
+                </button>
+            </div>
+        </div>
+
+        <!-- Métadonnées de la sortie -->
+        <div id="carpoolOutingMeta" style="margin-bottom: 1.5rem;"></div>
+
+        <!-- Résumé statistiques -->
+        <div id="carpoolSummaryCard" class="fey-card" style="display: none; margin-bottom: 1.5rem;">
+            <div class="fey-card-header">📊 Résumé</div>
+            <div id="carpoolSummaryContent" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;"></div>
+        </div>
+
+        <!-- Voitures Aller -->
+        <div class="fey-card" style="margin-bottom: 1.5rem;">
+            <div class="fey-card-header" style="background: linear-gradient(135deg, #E3F2FD, #BBDEFB); border-left: 4px solid #2196F3;">🚗 Voitures Aller</div>
+            <div id="carpoolDriversListOutbound"></div>
+        </div>
+
+        <!-- Enfants sans voiture - Aller -->
+        <div class="fey-card" style="margin-bottom: 1.5rem;">
+            <div class="fey-card-header" style="background: linear-gradient(135deg, #FFF3E0, #FFE0B2); border-left: 4px solid #FF9800;">⚠️ Enfants sans voiture - Aller</div>
+            <div id="carpoolUnassignedOutbound"></div>
+        </div>
+
+        <!-- Voitures Retour -->
+        <div class="fey-card" style="margin-bottom: 1.5rem;">
+            <div class="fey-card-header" style="background: linear-gradient(135deg, #F3E5F5, #E1BEE7); border-left: 4px solid #9C27B0;">🔄 Voitures Retour</div>
+            <div id="carpoolDriversListReturn"></div>
+        </div>
+
+        <!-- Enfants sans voiture - Retour -->
+        <div class="fey-card" style="margin-bottom: 1.5rem;">
+            <div class="fey-card-header" style="background: linear-gradient(135deg, #FFF3E0, #FFE0B2); border-left: 4px solid #FF9800;">⚠️ Enfants sans voiture - Retour</div>
+            <div id="carpoolUnassignedReturn"></div>
+        </div>
+
+        <!-- Formulaire conducteur -->
+        <div class="fey-card" style="margin-top: 1.5rem; background: linear-gradient(135deg, #E8F5E8, #C8E6C9); border-left: 4px solid #4CAF50;">
+            <div class="fey-card-header">🚗 Proposer ma voiture</div>
+            <form id="carpoolDriverForm" style="display: flex; flex-direction: column; gap: 1rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">👤 Nom</label>
+                        <input type="text" name="driverName" required style="width: 100%; padding: 0.75rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm);">
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">📱 Téléphone</label>
+                        <input type="tel" name="driverPhone" style="width: 100%; padding: 0.75rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm);">
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">👶 Places enfants</label>
+                        <input type="number" name="kidSpots" min="0" max="10" value="4" required style="width: 100%; padding: 0.75rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm);">
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">👨‍👩‍👧 Places adultes</label>
+                        <input type="number" name="adultSpots" min="0" max="10" value="0" style="width: 100%; padding: 0.75rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm);">
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">🚦 Trajet</label>
+                        <select name="roundTrip" style="width: 100%; padding: 0.75rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm);">
+                            <option value="aller-retour">Aller & Retour</option>
+                            <option value="aller-seulement">Aller seulement</option>
+                            <option value="retour-seulement">Retour seulement</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">📝 Notes (optionnel)</label>
+                    <textarea name="driverNotes" rows="2" style="width: 100%; padding: 0.75rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm);"></textarea>
+                </div>
+                <button type="submit" class="fey-btn" style="background: #4CAF50; padding: 0.75rem;">
+                    ✅ Proposer ma voiture
+                </button>
+            </form>
+        </div>
+
+        <!-- Formulaire passager -->
+        <div class="fey-card" style="margin-top: 1.5rem; background: linear-gradient(135deg, #E3F2FD, #BBDEFB); border-left: 4px solid #2196F3;">
+            <div class="fey-card-header" style="display:none">👶 Inscrire un enfant</div>
+            <form id="carpoolPassengerForm" style="display:none; flex-direction: column; gap: 1rem;">
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">👶 Nom de l'enfant</label>
+                    <select name="childName" required style="width: 100%; padding: 0.75rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm);">
+                        <option value="">Choisir un enfant...</option>
+                    </select>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">👨‍👩‍👧 Parent/Tuteur</label>
+                        <input type="text" name="guardianName" style="width: 100%; padding: 0.75rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm);">
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">📱 Téléphone</label>
+                        <input type="tel" name="guardianPhone" style="width: 100%; padding: 0.75rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm);">
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">🚗 Voiture (optionnel)</label>
+                        <select name="driverId" style="width: 100%; padding: 0.75rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm);">
+                            <option value="">Je n'ai pas encore de conducteur</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">🚦 Trajet</label>
+                        <select name="roundTrip" style="width: 100%; padding: 0.75rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm);">
+                            <option value="aller-retour">Aller & Retour</option>
+                            <option value="aller-seulement">Aller seulement</option>
+                            <option value="retour-seulement">Retour seulement</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">📝 Notes (optionnel)</label>
+                    <textarea name="passengerNotes" rows="2" style="width: 100%; padding: 0.75rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm);"></textarea>
+                </div>
+                <button type="submit" class="fey-btn" style="background: #2196F3; padding: 0.75rem;">
+                    ✅ Inscrire l'enfant
+                </button>
+            </form>
+        </div>
+
+    </div>
+
+    <!-- Scripts Supabase et services -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/supabaseClient.js"></script>
+    <script src="js/children-service.js"></script>
+    <script src="js/scouts-roster.js"></script>
+    <script src="js/outings-service.js?v=20251110"></script>
+    <script src="js/registrations-service.js"></script>
+    <script src="js/attendance-service.js"></script>
+    <script src="js/carpool-manager.js"></script>
+    <script src="js/carpool-ui.js?v=20251110"></script>
+    <script src="js/common.js"></script>
+
+    <!-- Script pour pré-sélectionner la sortie depuis l'URL et gérer la mise à jour de l'URL -->
+    <script>
+        // Met à jour l'URL ?outing=... lorsque l'utilisateur choisit une sortie
+        function updateOutingQueryParam() {
+            const select = document.getElementById('carpoolOutingSelect');
+            if (!select) return;
+            const option = select.options[select.selectedIndex];
+            const value = select.value ? String(select.value) : '';
+            const label = option ? option.textContent : value;
+            const slug = option?.dataset?.slug ? String(option.dataset.slug) : '';
+            try {
+                const url = new URL(window.location.href);
+                if (value) {
+                    url.searchParams.set('outing', value);
+                    if (slug) {
+                        url.searchParams.set('outting', slug);
+                    } else {
+                        url.searchParams.set('outting', label);
+                    }
+                    url.searchParams.set('outingLabel', label);
+                } else {
+                    url.searchParams.delete('outing');
+                    url.searchParams.delete('outting');
+                    url.searchParams.delete('outingLabel');
+                }
+                window.history.replaceState({}, '', url.toString());
+            } catch (e) {}
+        }
+
+        // Au chargement, si ?outing= est présent, sélection automatique après que l'UI ait rempli la liste
+        (function initOutingFromURL() {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const outing = params.get('outing') || params.get('outting') || params.get('outingLabel');
+                if (!outing) return;
+                const sel = document.getElementById('carpoolOutingSelect');
+                if (!sel) return;
+                const trySelect = () => {
+                    const option = Array.from(sel.options).find(o => o.value === outing || o.textContent === outing);
+                    if (option) {
+                        sel.value = option.value;
+                        sel.dispatchEvent(new Event('change'));
+                    } else {
+                        setTimeout(trySelect, 200);
+                    }
+                };
+                trySelect();
+            } catch (e) {}
+        })();
+        (function() {
+            'use strict';
+
+            // Fonction pour mettre à jour l'URL avec le paramètre outing
+            // Obsolete: URL handling is centralized elsewhere
+            function updateURLWithOuting(_) {}
+
+            // Récupérer l'ID de sortie depuis l'URL (supporte 'outing' et la faute 'outting')
+            const urlParams = new URLSearchParams(window.location.search);
+            const outingId = urlParams.get('outing') || urlParams.get('outting') || urlParams.get('outingLabel');
+
+            // Si pas d'ID fourni, on laisse le sélecteur visible et l'utilisateur choisira
+            if (!outingId) {
+                console.log('Aucun ID de sortie fourni, affichage du sélecteur');
+
+                // Ajouter un listener pour mettre à jour l'URL quand l'utilisateur sélectionne une sortie
+                setTimeout(() => {
+                    const selectElement = document.getElementById('carpoolOutingSelect');
+                    if (selectElement) {
+                        // Créer un wrapper pour l'événement change original
+                        // Laisser carpool-ui.js gérer la sélection, l'URL et le rendu
+                        selectElement.addEventListener('change', function(_){});
+                    }
+                }, 1000);
+                return;
+            } else {
+                // Un ID est présent dans l'URL: sélectionner cette sortie quand la liste est prête
+                setTimeout(() => {
+                    const selectElement = document.getElementById('carpoolOutingSelect');
+                    if (!selectElement) return;
+                    const trySelectById = () => {
+                        const opts = Array.from(selectElement.options);
+                        // Essayer correspondance par value (id), sinon par label (titre)
+                        const opt = opts.find(o => o.value === outingId) || opts.find(o => (o.textContent || '') === outingId);
+                        if (opt) {
+                            selectElement.value = opt.value;
+                            selectElement.dispatchEvent(new Event('change'));
+                            const header = document.querySelector('#covoiturage .fey-card-header');
+                            if (header) {
+                                header.innerHTML = `🚗 Covoiturage - ${opt.textContent}`;
+                            }
+                        } else {
+                            // Attendre que les options soient chargées
+                            setTimeout(trySelectById, 200);
+                        }
+                    };
+                    trySelectById();
+                }, 0);
+            }
+
+            // Si un ID est fourni, on cache le sélecteur et on pré-sélectionne automatiquement
+            const selectCard = document.getElementById('carpoolSelectCard');
+            if (selectCard) {
+                selectCard.style.display = 'none';
+            }
+
+            // Attendre que carpool-ui.js soit chargé et ait initialisé
+            const checkInterval = setInterval(() => {
+                const selectElement = document.getElementById('carpoolOutingSelect');
+                if (!selectElement) return;
+
+                // Vérifier si des options ont été chargées (plus que l'option par défaut)
+                if (selectElement.options.length > 1) {
+                    clearInterval(checkInterval);
+
+                    // Trouver et sélectionner la bonne option
+                    let found = false;
+                    for (let i = 0; i < selectElement.options.length; i++) {
+                        if (selectElement.options[i].value === outingId) {
+                            selectElement.value = outingId;
+                            found = true;
+                            // Déclencher l'événement change pour que carpool-ui.js charge les données
+                            const event = new Event('change', { bubbles: true });
+                            selectElement.dispatchEvent(event);
+                            break;
+                        }
+                    }
+
+                    if (!found) {
+                        // Sortie non trouvée
+                        document.body.innerHTML = `
+                            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 2rem; text-align: center;">
+                                <div style="font-size: 4rem; margin-bottom: 1rem;">❌</div>
+                                <h1 style="color: var(--c-forest-700); margin-bottom: 1rem;">Sortie introuvable</h1>
+                                <p style="color: #666; font-size: 1.1rem;">La sortie demandée n'existe pas ou a été supprimée.</p>
+                                <p style="color: #666; margin-top: 0.5rem;">Veuillez contacter votre chef scout pour obtenir un nouveau lien.</p>
+                            </div>
+                        `;
+                    } else {
+                        // Afficher les informations de la sortie dans le titre
+                        const selectedOption = selectElement.options[selectElement.selectedIndex];
+                        const header = document.querySelector('#covoiturage .fey-card-header');
+                        if (header && selectedOption) {
+                            header.innerHTML = `🚗 Covoiturage - ${selectedOption.textContent}`;
+                        }
+                    }
+                }
+            }, 100);
+
+            // Timeout après 10 secondes si rien ne se charge
+            setTimeout(() => {
+                clearInterval(checkInterval);
+                const selectElement = document.getElementById('carpoolOutingSelect');
+                if (!selectElement || selectElement.options.length <= 1) {
+                    document.body.innerHTML = `
+                        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 2rem; text-align: center;">
+                            <div style="font-size: 4rem; margin-bottom: 1rem;">⏱️</div>
+                            <h1 style="color: var(--c-forest-700); margin-bottom: 1rem;">Impossible de charger</h1>
+                            <p style="color: #666; font-size: 1.1rem;">Les données n'ont pas pu être chargées.</p>
+                            <p style="color: #666; margin-top: 0.5rem;">Vérifiez votre connexion internet et réessayez.</p>
+                            <button onclick="location.reload()" style="margin-top: 2rem; padding: 1rem 2rem; background: #4CAF50; color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer;">🔄 Réessayer</button>
+                        </div>
+                    `;
+                }
+            }, 10000);
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Import Outings to Supabase</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        #status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            display: none;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        #progress {
+            margin-top: 15px;
+        }
+        .progress-item {
+            padding: 5px;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Import Outings to Supabase</h1>
+        <p>This tool will import all the hardcoded outings from the calendar into your Supabase database.</p>
+
+        <div class="input-group">
+            <label for="password">Admin Password:</label>
+            <input type="password" id="password" placeholder="Enter admin password (Scout2025!)">
+        </div>
+
+        <button id="importBtn" onclick="importOutings()">Import All Outings</button>
+
+        <div id="status"></div>
+        <div id="progress"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/supabaseClient.js"></script>
+    <script src="js/outings-service.js"></script>
+
+    <script>
+        const outings = [
+  {
+    "slug": "réunion-parents-2025-09",
+    "title": "👨‍👩‍👧‍👦 Réunion parents",
+    "start_at": "2025-09-28T09:00:00",
+    "end_at": "2025-09-28T18:00:00",
+    "location": "",
+    "meeting_point": "",
+    "departure_details": "",
+    "return_details": "",
+    "notes": "Réunion d'information pour les parents",
+    "auto_carpool": false
+  },
+  {
+    "slug": "weekend-de-groupe-2025-10",
+    "title": "🏕️ Weekend de Groupe",
+    "start_at": "2025-10-03T09:00:00",
+    "end_at": "2025-10-04T18:00:00",
+    "location": "",
+    "meeting_point": "",
+    "departure_details": "",
+    "return_details": "",
+    "notes": "Weekend de groupe avec activités scoutes",
+    "auto_carpool": false
+  },
+  {
+    "slug": "sortie-voile-2025-10",
+    "title": "⛵ Sortie voile",
+    "start_at": "2025-10-12T09:00:00",
+    "end_at": "2025-10-12T18:00:00",
+    "location": "Verneuil sur Seine",
+    "meeting_point": "",
+    "departure_details": "",
+    "return_details": "",
+    "notes": "Sortie voile à Verneuil sur Seine",
+    "auto_carpool": false
+  },
+  {
+    "slug": "weekend-abbaye-depernon-2025-11",
+    "title": "⛪ Weekend Abbaye d'Epernon",
+    "start_at": "2025-11-15T09:00:00",
+    "end_at": "2025-11-16T18:00:00",
+    "location": "Prieuré Saint Thomas, Epernon",
+    "meeting_point": "",
+    "departure_details": "",
+    "return_details": "",
+    "notes": "Weekend au Prieuré Saint Thomas",
+    "auto_carpool": false
+  },
+  {
+    "slug": "lumière-de-bethléem-2025-12",
+    "title": "🕯️ Lumière de Bethléem",
+    "start_at": "2025-12-14T09:00:00",
+    "end_at": "2025-12-14T18:00:00",
+    "location": "",
+    "meeting_point": "",
+    "departure_details": "",
+    "return_details": "",
+    "notes": "Lumière de Bethléem + Crèche vivante",
+    "auto_carpool": false
+  },
+  {
+    "slug": "sortie-musée-de-la-marine-2026-01",
+    "title": "⚓ Sortie Musée de la Marine",
+    "start_at": "2026-01-18T09:00:00",
+    "end_at": "2026-01-18T18:00:00",
+    "location": "Musée de la Marine, Paris",
+    "meeting_point": "",
+    "departure_details": "",
+    "return_details": "",
+    "notes": "Sortie Musée de la Marine + galettes",
+    "auto_carpool": false
+  },
+  {
+    "slug": "sortie-montmartre-2026-02",
+    "title": "🗼 Sortie Montmartre",
+    "start_at": "2026-02-08T09:00:00",
+    "end_at": "2026-02-08T18:00:00",
+    "location": "Montmartre, Paris",
+    "meeting_point": "",
+    "departure_details": "",
+    "return_details": "",
+    "notes": "Découverte de Montmartre et du Sacré-Cœur",
+    "auto_carpool": false
+  },
+  {
+    "slug": "weekend-de-mars-2026-03",
+    "title": "🌸 Weekend de mars",
+    "start_at": "2026-03-14T09:00:00",
+    "end_at": "2026-03-15T18:00:00",
+    "location": "",
+    "meeting_point": "",
+    "departure_details": "",
+    "return_details": "",
+    "notes": "Weekend de printemps avec activités nature",
+    "auto_carpool": false
+  },
+  {
+    "slug": "sortie-château-2026-04",
+    "title": "🏰 Sortie château",
+    "start_at": "2026-04-12T09:00:00",
+    "end_at": "2026-04-12T18:00:00",
+    "location": "",
+    "meeting_point": "",
+    "departure_details": "",
+    "return_details": "",
+    "notes": "Visite d'un château historique",
+    "auto_carpool": false
+  },
+  {
+    "slug": "mini-camp-mont-saint-michel-2026-05",
+    "title": "🏰 Mini-camp Mont Saint-Michel",
+    "start_at": "2026-05-15T09:00:00",
+    "end_at": "2026-05-17T18:00:00",
+    "location": "Mont Saint-Michel",
+    "meeting_point": "",
+    "departure_details": "",
+    "return_details": "",
+    "notes": "Mini-camp au Mont Saint-Michel",
+    "auto_carpool": false
+  },
+  {
+    "slug": "réunion-présentation-camp-2026-06",
+    "title": "👨‍👩‍👧‍👦 Réunion présentation camp",
+    "start_at": "2026-06-12T09:00:00",
+    "end_at": "2026-06-12T18:00:00",
+    "location": "",
+    "meeting_point": "",
+    "departure_details": "",
+    "return_details": "",
+    "notes": "Réunion de présentation du camp d'été",
+    "auto_carpool": false
+  },
+  {
+    "slug": "weekend-de-juin-2026-06",
+    "title": "🌸 Weekend de juin",
+    "start_at": "2026-06-13T09:00:00",
+    "end_at": "2026-06-14T18:00:00",
+    "location": "",
+    "meeting_point": "",
+    "departure_details": "",
+    "return_details": "",
+    "notes": "Weekend de fin d'année",
+    "auto_carpool": false
+  },
+  {
+    "slug": "camp-dété-2026-07",
+    "title": "🏕️ Camp d'été",
+    "start_at": "2026-07-05T09:00:00",
+    "end_at": "2026-07-19T18:00:00",
+    "location": "",
+    "meeting_point": "",
+    "departure_details": "",
+    "return_details": "",
+    "notes": "Camp d'été (première quinzaine des vacances Zone C)",
+    "auto_carpool": false
+  }
+];
+
+        async function importOutings() {
+            const password = document.getElementById('password').value;
+            const statusDiv = document.getElementById('status');
+            const progressDiv = document.getElementById('progress');
+            const importBtn = document.getElementById('importBtn');
+
+            if (!password) {
+                showStatus('Please enter the admin password', 'error');
+                return;
+            }
+
+            if (!window.OutingsService) {
+                showStatus('Error: OutingsService not loaded. Make sure all scripts are loaded.', 'error');
+                return;
+            }
+
+            importBtn.disabled = true;
+            progressDiv.innerHTML = '';
+            showStatus('Starting import...', 'info');
+
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (let i = 0; i < outings.length; i++) {
+                const outing = outings[i];
+                const progress = document.createElement('div');
+                progress.className = 'progress-item';
+                progress.textContent = `[${i + 1}/${outings.length}] Importing: ${outing.title}...`;
+                progressDiv.appendChild(progress);
+
+                try {
+                    await window.OutingsService.create(outing, password);
+                    progress.textContent += ' ✓ Success';
+                    progress.style.color = 'green';
+                    successCount++;
+                } catch (error) {
+                    progress.textContent += ` ✗ Error: ${error.message}`;
+                    progress.style.color = 'red';
+                    errorCount++;
+                }
+
+                // Small delay to avoid overwhelming the API
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+
+            importBtn.disabled = false;
+            showStatus(
+                `Import complete! ${successCount} outings imported successfully, ${errorCount} errors.`,
+                errorCount > 0 ? 'error' : 'success'
+            );
+        }
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = type;
+            statusDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
