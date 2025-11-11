@@ -50,6 +50,37 @@
         return (name || '').toString().trim().toUpperCase();
     }
 
+    function normalizeDirection(value, options = {}) {
+        const allowRoundTrip = options.allowRoundTrip ?? false;
+        const defaultDirection = options.defaultDirection ?? 'outbound';
+
+        if (window.CarpoolManager && typeof window.CarpoolManager.normalizeDirection === 'function') {
+            return window.CarpoolManager.normalizeDirection(value, {
+                allowRoundTrip,
+                defaultDirection
+            });
+        }
+
+        const raw = (value || '').toString().trim().toLowerCase();
+        if (!raw) {
+            return defaultDirection;
+        }
+
+        if (raw === 'outbound' || raw === 'aller' || raw === 'aller-seulement' || raw === 'aller_only') {
+            return 'outbound';
+        }
+
+        if (raw === 'return' || raw === 'retour' || raw === 'retour-seulement' || raw === 'retour_only') {
+            return 'return';
+        }
+
+        if (allowRoundTrip && (raw === 'round-trip' || raw === 'roundtrip' || raw === 'round_trip' || raw === 'aller-retour')) {
+            return 'round-trip';
+        }
+
+        return defaultDirection;
+    }
+
     function titleCase(name) {
         if (!name) return '';
         return name.toLowerCase().replace(/(^|[\s'-])(\p{L})/gu, (match, prefix, letter) => `${prefix}${letter.toUpperCase()}`);
@@ -508,14 +539,10 @@
     }
 
     function getPassengerDirection(passenger) {
-        if (!passenger) return 'aller-retour';
-        if (passenger.direction) {
-            return passenger.direction;
-        }
-        if (passenger.roundTrip) {
-            return passenger.roundTrip;
-        }
-        return 'aller-retour';
+        return normalizeDirection(passenger?.direction ?? passenger?.roundTrip, {
+            allowRoundTrip: true,
+            defaultDirection: 'round-trip'
+        });
     }
 
     function computeMetrics() {
@@ -894,6 +921,8 @@ function renderDrivers() {
         }
         try {
             await CarpoolManager.deletePassenger(passengerId);
+            // Refresh lists so the child immediately reappears in the available list for the current direction
+            try { await loadOutingData(true); } catch (e) { console.warn('[CarpoolUI] refresh after delete failed', e); }
             notify('Inscription supprimée.', 'success');
             await loadOutingData(true);
         } catch (error) {
@@ -1064,73 +1093,123 @@ function renderDrivers() {
         dropZone.style.background = 'linear-gradient(135deg, #E8F5E8, #C8E6C9)';
         dropZone.classList.remove('drag-over');
 
-        if (!draggedChild) return;
+        if (!draggedChild) {
+            return;
+        }
 
         const driverId = dropZone.dataset.driverId;
-        const dropZoneDirection = dropZone.dataset.direction;
+        const dropZoneDirection = normalizeDirection(dropZone.dataset.direction, {
+            allowRoundTrip: false,
+            defaultDirection: 'outbound'
+        });
         const childName = draggedChild.displayName;
-        const childDirection = draggedChild.direction;
         const childId = draggedChild.id || null;
         const normalizedChildName = draggedChild.normalizedName || normalizeName(childName);
- 
-        // Validate that the direction matches
+        const childDirection = normalizeDirection(draggedChild.direction, {
+            allowRoundTrip: false,
+            defaultDirection: dropZoneDirection
+        });
+
+        const directionLabels = {
+            outbound: 'Aller',
+            return: 'Retour'
+        };
+
         if (dropZoneDirection !== childDirection) {
-            const directionLabels = {
-                'outbound': 'Aller',
-                'return': 'Retour'
-            };
-            notify(`Impossible : ${childName} est dans la liste "${directionLabels[childDirection]}" et ne peut être placé(e) que dans une voiture "${directionLabels[childDirection]}".`, 'error');
+            notify(`Impossible : ${childName} est dans la liste "${directionLabels[childDirection] || childDirection}" et ne peut être placé(e) que dans une voiture "${directionLabels[childDirection] || childDirection}".`, 'error');
             draggedChild = null;
             return;
         }
- 
+
+        if (!state.selectedOutingId) {
+            notify('Aucune sortie sélectionnée : impossible d\'assigner un enfant.', 'error');
+            draggedChild = null;
+            return;
+        }
+
         try {
-            // Check if passenger already exists
-            const existingPassenger = state.passengers.find(p => {
-                if (childId && p.child_id) {
-                    return p.child_id === childId;
+            const passengersForChild = state.passengers.filter(passenger => {
+                if (!passenger) return false;
+                if (childId && passenger.child_id) {
+                    return sameId(passenger.child_id, childId);
                 }
-                return normalizeName(p.child_name || p.name) === normalizedChildName;
+                const passengerNormalized = normalizeName(passenger.child_name || passenger.name);
+                return passengerNormalized === normalizedChildName;
             });
- 
-            if (existingPassenger) {
-                // Update existing passenger to assign them to this driver
-                await CarpoolManager.updatePassenger(existingPassenger.id, {
-                    driver_id: driverId
-                });
-                notify(`${childName} a été assigné(e) à la voiture`, 'success');
-            } else {
-                // Create new passenger
-                const directionMap = {
-                    'outbound': 'aller-seulement',
-                    'return': 'retour-seulement'
-                };
- 
-                const passengerPayload = {
-                    outing_id: state.selectedOutingId,
-                    trip_id: state.selectedOutingId,
-                    child_id: childId,
-                    child_name: childName,
-                    name: normalizedChildName,
-                    driver_id: driverId,
-                    direction: childDirection,
-                    roundTrip: directionMap[childDirection] || 'aller-retour',
-                    guardian_name: '',
-                    guardian_phone: '',
-                    notes: ''
-                };
- 
-                await CarpoolManager.createPassenger(passengerPayload);
-                notify(`${childName} a été inscrit(e) et assigné(e) à la voiture`, 'success');
+
+            const passengerForDirection = passengersForChild.find(passenger => getPassengerDirection(passenger) === dropZoneDirection);
+            const roundTripPassenger = passengersForChild.find(passenger => getPassengerDirection(passenger) === 'round-trip');
+
+            if (passengerForDirection) {
+                if (sameId(passengerForDirection.driver_id, driverId)) {
+                    notify(`${childName} est déjà dans cette voiture.`, 'info');
+                } else {
+                    await CarpoolManager.updatePassenger(passengerForDirection.id, {
+                        driver_id: driverId
+                    });
+                    notify(`${childName} a été assigné(e) à la voiture`, 'success');
+                }
+                await loadOutingData(true);
+                return;
             }
- 
+
+            if (roundTripPassenger) {
+                const currentDriverId = roundTripPassenger.driver_id ?? null;
+                const hasCurrentDriver = currentDriverId !== null && currentDriverId !== '';
+
+                if (!hasCurrentDriver || sameId(currentDriverId, driverId)) {
+                    await CarpoolManager.updatePassenger(roundTripPassenger.id, {
+                        direction: dropZoneDirection,
+                        driver_id: driverId
+                    });
+                    notify(`${childName} a été assigné(e) à la voiture`, 'success');
+                    await loadOutingData(true);
+                    return;
+                }
+
+                const directionToPreserve = dropZoneDirection === 'outbound' ? 'return' : 'outbound';
+                const originalDriver = state.drivers.find(driver => sameId(driver.id, currentDriverId));
+                let preservedDriverId = currentDriverId;
+
+                if (directionToPreserve === 'outbound') {
+                    if (!originalDriver || !CarpoolManager.isDriverOutbound(originalDriver)) {
+                        preservedDriverId = null;
+                    }
+                } else {
+                    if (!originalDriver || !CarpoolManager.isDriverReturn(originalDriver)) {
+                        preservedDriverId = null;
+                    }
+                }
+
+                await CarpoolManager.updatePassenger(roundTripPassenger.id, {
+                    direction: directionToPreserve,
+                    driver_id: preservedDriverId
+                });
+            }
+
+            const templatePassenger = roundTripPassenger || {};
+            const passengerPayload = {
+                outing_id: state.selectedOutingId,
+                trip_id: state.selectedOutingId,
+                child_id: childId || templatePassenger.child_id || null,
+                child_name: childName || templatePassenger.child_name || normalizedChildName,
+                name: templatePassenger.name || normalizedChildName,
+                driver_id: driverId,
+                direction: dropZoneDirection,
+                guardian_name: templatePassenger.guardian_name || '',
+                guardian_phone: templatePassenger.guardian_phone || '',
+                notes: templatePassenger.notes || ''
+            };
+
+            await CarpoolManager.createPassenger(passengerPayload);
+            notify(`${childName} a été inscrit(e) et assigné(e) à la voiture`, 'success');
             await loadOutingData(true);
         } catch (error) {
             console.error(`${LOG_PREFIX} Erreur lors du drop`, error);
             notify(error.message || 'Impossible d\'assigner l\'enfant', 'error');
+        } finally {
+            draggedChild = null;
         }
- 
-        draggedChild = null;
     }
 
     function attachEvents() {

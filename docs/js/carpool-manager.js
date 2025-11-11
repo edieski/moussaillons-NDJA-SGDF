@@ -46,6 +46,54 @@
         return normalizeId(a) === normalizeId(b);
     }
 
+    const DIRECTIONS = Object.freeze({
+        OUTBOUND: 'outbound',
+        RETURN: 'return',
+        ROUND_TRIP: 'round-trip'
+    });
+
+    function normalizeDirection(value, options = {}) {
+        const {
+            allowRoundTrip = true,
+            defaultDirection = DIRECTIONS.ROUND_TRIP
+        } = options;
+
+        if (value == null || value === '') {
+            return defaultDirection;
+        }
+
+        const raw = String(value).trim().toLowerCase();
+        if (!raw) {
+            return defaultDirection;
+        }
+
+        if (raw === 'outbound' || raw === 'aller' || raw === 'aller-seulement' || raw === 'aller_only') {
+            return DIRECTIONS.OUTBOUND;
+        }
+
+        if (raw === 'return' || raw === 'retour' || raw === 'retour-seulement' || raw === 'retour_only') {
+            return DIRECTIONS.RETURN;
+        }
+
+        if (allowRoundTrip && (raw === 'round-trip' || raw === 'roundtrip' || raw === 'round_trip' || raw === 'aller-retour')) {
+            return DIRECTIONS.ROUND_TRIP;
+        }
+
+        return defaultDirection;
+    }
+
+    function normalizePassengerRow(row) {
+        if (!row) return null;
+        const direction = normalizeDirection(row.direction ?? row.round_trip ?? row.roundTrip, {
+            allowRoundTrip: true,
+            defaultDirection: DIRECTIONS.ROUND_TRIP
+        });
+        return {
+            ...row,
+            direction
+        };
+    }
+
     // ============================================
     // GESTION DES SORTIES (using OutingsService)
     // ============================================
@@ -476,9 +524,13 @@
 
             if (error) throw error;
 
-            passengersCache[outingId] = data || [];
-            log(`${data.length} passager(s) chargé(s)`, data);
-            return data;
+            const rows = (data || [])
+                .map(normalizePassengerRow)
+                .filter(Boolean);
+
+            passengersCache[outingId] = rows;
+            log(`${rows.length} passager(s) chargé(s)`, rows);
+            return rows;
         } catch (error) {
             console.error(`${LOG_PREFIX} Erreur chargement passagers`, error);
             notify(`Erreur de chargement: ${error.message}`, 'error');
@@ -491,18 +543,25 @@
 
         try {
             const outingId = passengerData.outing_id || passengerData.trip_id;
+            const resolvedDirection = normalizeDirection(
+                passengerData.direction ?? passengerData.roundTrip,
+                { allowRoundTrip: true, defaultDirection: DIRECTIONS.ROUND_TRIP }
+            );
+
+            const insertPayload = {
+                outing_id: outingId,
+                driver_id: passengerData.driver_id || null,
+                child_id: passengerData.child_id || passengerData.childId || null,
+                child_name: passengerData.child_name || passengerData.name,
+                guardian_name: passengerData.guardian_name || '',
+                guardian_phone: passengerData.guardian_phone || '',
+                notes: passengerData.notes || '',
+                direction: resolvedDirection
+            };
+
             const { data, error } = await supabase
                 .from('carpool_passengers')
-                .insert({
-                    outing_id: outingId,
-                    driver_id: passengerData.driver_id || null,
-                    child_id: passengerData.child_id || passengerData.childId || null,
-                    child_name: passengerData.child_name || passengerData.name,
-                    guardian_name: passengerData.guardian_name || '',
-                    guardian_phone: passengerData.guardian_phone || '',
-                    notes: passengerData.notes || '',
-                    direction: passengerData.direction || passengerData.roundTrip || 'round-trip'
-                })
+                .insert(insertPayload)
                 .select()
                 .single();
 
@@ -512,11 +571,14 @@
             if (!passengersCache[outingId]) {
                 passengersCache[outingId] = [];
             }
-            passengersCache[outingId].push(data);
+            const normalizedPassenger = normalizePassengerRow(data);
+            if (normalizedPassenger) {
+                passengersCache[outingId].push(normalizedPassenger);
+            }
 
-            log('Passager créé', data);
+            log('Passager créé', normalizedPassenger || data);
             notify('Passager inscrit avec succès', 'success');
-            return data;
+            return normalizedPassenger || data;
         } catch (error) {
             console.error(`${LOG_PREFIX} Erreur création passager`, error);
             notify(`Impossible d'inscrire le passager: ${error.message}`, 'error');
@@ -528,26 +590,44 @@
         log('Mise à jour d\'un passager...', { passengerId, updates });
         
         try {
+            const baseUpdates = { ...updates };
+
+            if ('roundTrip' in baseUpdates) {
+                if (baseUpdates.roundTrip !== undefined && baseUpdates.roundTrip !== null && baseUpdates.direction == null) {
+                    baseUpdates.direction = baseUpdates.roundTrip;
+                }
+                delete baseUpdates.roundTrip;
+            }
+
+            if (baseUpdates.direction !== undefined) {
+                baseUpdates.direction = normalizeDirection(baseUpdates.direction, {
+                    allowRoundTrip: true,
+                    defaultDirection: DIRECTIONS.ROUND_TRIP
+                });
+            }
+
             const { data, error } = await supabase
                 .from('carpool_passengers')
-                .update(updates)
+                .update(baseUpdates)
                 .eq('id', passengerId)
                 .select()
                 .single();
 
             if (error) throw error;
 
+            const normalized = normalizePassengerRow(data);
+
             // Mettre à jour le cache
             Object.keys(passengersCache).forEach(tripId => {
                 const index = passengersCache[tripId].findIndex(p => sameId(p.id, passengerId));
                 if (index !== -1) {
-                    passengersCache[tripId][index] = data;
+                    passengersCache[tripId][index] = normalized || data;
                 }
             });
 
-            log('Passager mis à jour', data);
+            log('Passager mis à jour', normalized || data);
             notify('Passager mis à jour avec succès', 'success');
-            return data;
+            return normalized || data;
         } catch (error) {
             console.error(`${LOG_PREFIX} Erreur mise à jour passager`, error);
             notify(`Impossible de mettre à jour: ${error.message}`, 'error');
@@ -595,14 +675,20 @@
 
     function passengerMatchesDirection(passenger, direction) {
         if (!passenger) return false;
-        const dir = (passenger.direction || passenger.roundTrip || 'round-trip').toLowerCase();
-        if (direction === 'outbound') {
-            return dir === 'outbound' || dir === 'aller-seulement' || dir === 'round-trip' || dir === 'aller-retour';
+        const passengerDirection = normalizeDirection(passenger.direction ?? passenger.roundTrip, {
+            allowRoundTrip: true,
+            defaultDirection: DIRECTIONS.ROUND_TRIP
+        });
+        const targetDirection = normalizeDirection(direction, {
+            allowRoundTrip: false,
+            defaultDirection: DIRECTIONS.OUTBOUND
+        });
+
+        if (passengerDirection === DIRECTIONS.ROUND_TRIP) {
+            return targetDirection === DIRECTIONS.OUTBOUND || targetDirection === DIRECTIONS.RETURN;
         }
-        if (direction === 'return') {
-            return dir === 'return' || dir === 'retour-seulement' || dir === 'round-trip' || dir === 'aller-retour';
-        }
-        return false;
+
+        return passengerDirection === targetDirection;
     }
 
     function getRemainingSeats(driver, passengers) {
@@ -670,6 +756,8 @@
         getPassengersByDriver,
         clearCache,
         sameId,
+        DIRECTIONS,
+        normalizeDirection,
         
         // Pour le debugging
         log,
