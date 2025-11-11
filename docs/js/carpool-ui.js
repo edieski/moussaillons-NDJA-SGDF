@@ -1043,8 +1043,55 @@ function renderDrivers() {
 
     // Drag and Drop handlers
     let draggedChild = null;
- 
-     function handleChildDragStart(event) {
+
+    const DRAG_AUTO_SCROLL_EDGE = 120;
+    const DRAG_AUTO_SCROLL_STEP = 32;
+    const DRAG_AUTO_SCROLL_OVER_OPTIONS = Object.freeze({ capture: true, passive: false });
+    const DRAG_AUTO_SCROLL_STOP_OPTIONS = Object.freeze({ capture: true });
+    let dragAutoScrollActive = false;
+
+    function handleGlobalDragOver(event) {
+        if (!draggedChild) {
+            return;
+        }
+        event.preventDefault();
+
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+        const clientY = event.clientY ?? 0;
+
+        let deltaY = 0;
+        if (clientY < DRAG_AUTO_SCROLL_EDGE) {
+            deltaY = -DRAG_AUTO_SCROLL_STEP;
+        } else if (clientY > viewportHeight - DRAG_AUTO_SCROLL_EDGE) {
+            deltaY = DRAG_AUTO_SCROLL_STEP;
+        }
+
+        if (deltaY !== 0) {
+            window.scrollBy({ top: deltaY, left: 0, behavior: 'auto' });
+        }
+    }
+
+    function stopDragAutoScroll() {
+        if (!dragAutoScrollActive) {
+            return;
+        }
+        dragAutoScrollActive = false;
+        document.removeEventListener('dragover', handleGlobalDragOver, DRAG_AUTO_SCROLL_OVER_OPTIONS);
+        document.removeEventListener('dragend', stopDragAutoScroll, DRAG_AUTO_SCROLL_STOP_OPTIONS);
+        document.removeEventListener('drop', stopDragAutoScroll, DRAG_AUTO_SCROLL_STOP_OPTIONS);
+    }
+
+    function startDragAutoScroll() {
+        if (dragAutoScrollActive) {
+            return;
+        }
+        dragAutoScrollActive = true;
+        document.addEventListener('dragover', handleGlobalDragOver, DRAG_AUTO_SCROLL_OVER_OPTIONS);
+        document.addEventListener('dragend', stopDragAutoScroll, DRAG_AUTO_SCROLL_STOP_OPTIONS);
+        document.addEventListener('drop', stopDragAutoScroll, DRAG_AUTO_SCROLL_STOP_OPTIONS);
+    }
+
+    function handleChildDragStart(event) {
         const target = event.currentTarget;
         const displayName = target.dataset.childName || '';
         const normalizedName = target.dataset.childNormalized || normalizeName(displayName);
@@ -1058,12 +1105,14 @@ function renderDrivers() {
         event.currentTarget.style.cursor = 'grabbing';
         event.dataTransfer.effectAllowed = 'move';
         event.dataTransfer.setData('text/html', event.currentTarget.innerHTML);
+        startDragAutoScroll();
     }
 
     function handleChildDragEnd(event) {
         event.currentTarget.style.opacity = '1';
         event.currentTarget.style.cursor = 'grab';
         draggedChild = null;
+        stopDragAutoScroll();
     }
 
     function handleDriverDragOver(event) {
@@ -1118,12 +1167,14 @@ function renderDrivers() {
         if (dropZoneDirection !== childDirection) {
             notify(`Impossible : ${childName} est dans la liste "${directionLabels[childDirection] || childDirection}" et ne peut être placé(e) que dans une voiture "${directionLabels[childDirection] || childDirection}".`, 'error');
             draggedChild = null;
+            stopDragAutoScroll();
             return;
         }
 
         if (!state.selectedOutingId) {
             notify('Aucune sortie sélectionnée : impossible d\'assigner un enfant.', 'error');
             draggedChild = null;
+            stopDragAutoScroll();
             return;
         }
 
@@ -1209,6 +1260,7 @@ function renderDrivers() {
             notify(error.message || 'Impossible d\'assigner l\'enfant', 'error');
         } finally {
             draggedChild = null;
+            stopDragAutoScroll();
         }
     }
 
