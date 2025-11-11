@@ -8,6 +8,8 @@
         selectedOutingId: null,
         drivers: [],
         passengers: [],
+        participants: [],
+        adultParticipants: [],
         roster: [],
         registrations: [],
         confirmedRoster: [],
@@ -487,6 +489,9 @@
             state.registrations = [];
             state.confirmedRoster = [];
             state.confirmedRosterMap = new Map();
+            state.passengers = [];
+            state.participants = [];
+            state.adultParticipants = [];
             updateConfirmedChildSelect();
             return;
         }
@@ -499,13 +504,18 @@
         dom.unassignedReturn.innerHTML = '<div class="fey-note" style="text-align: center; padding: 1rem;">Analyse...</div>';
  
         try {
-            const [drivers, passengers, _registrations] = await Promise.all([
+            const [drivers, passengers, participants, _registrations] = await Promise.all([
                 CarpoolManager.loadDrivers(state.selectedOutingId, force),
                 CarpoolManager.loadPassengers(state.selectedOutingId, force),
+                typeof CarpoolManager.loadParticipants === 'function'
+                    ? CarpoolManager.loadParticipants(state.selectedOutingId, force)
+                    : Promise.resolve([]),
                 loadConfirmedRegistrations(force)
             ]);
 
             state.drivers = drivers || [];
+            state.participants = participants || [];
+            state.adultParticipants = (state.participants || []).filter(entry => entry && entry.is_adult);
 
             const hasConfirmed = state.confirmedRoster.length > 0;
             const confirmedIds = new Set(state.confirmedRoster.map(entry => entry.child_id).filter(Boolean));
@@ -699,10 +709,23 @@ function renderDrivers() {
                 return CarpoolManager.passengerMatchesDirection(passenger, direction);
             });
 
-            const remainingSeats = CarpoolManager.getRemainingSeatsForDirection(driver, state.passengers, direction);
-            const adultSpots = driver.adult_spots || 0;
+            const adultEntries = (state.adultParticipants || []).filter(participant => {
+                if (!participant || !participant.is_adult) return false;
+                if (!sameId(participant.car_id, driver.id)) return false;
+                if (typeof CarpoolManager.participantMatchesDirection === 'function') {
+                    return CarpoolManager.participantMatchesDirection(participant, direction);
+                }
+                const participantDirection = normalizeDirection(participant.direction, {
+                    allowRoundTrip: false,
+                    defaultDirection: direction
+                });
+                return participantDirection === direction;
+            });
+
             const kidSpots = driver.kid_spots || driver.seats_available || 0;
-            const totalSpots = adultSpots + kidSpots;
+            const adultSpots = driver.adult_spots || 0;
+            const remainingChildSeats = CarpoolManager.getRemainingSeatsForDirection(driver, state.passengers, direction);
+            const remainingAdultSeats = Math.max(0, adultSpots - adultEntries.length);
 
             return `
                 <div class="fey-item driver-drop-zone" data-driver-id="${driver.id}" data-direction="${direction}" style="background: linear-gradient(135deg, #E8F5E8, #C8E6C9); border: 3px solid var(--c-ink-900); border-radius: var(--r-sm); padding: 1.25rem; box-shadow: 0 3px 10px rgba(0,0,0,0.1); transition: all 0.2s; margin-bottom: 1rem;">
@@ -718,15 +741,18 @@ function renderDrivers() {
                                 </div>
                             </div>
                         </div>
-                        <div style="text-align: center; background: rgba(255,255,255,0.9); border: 2px solid var(--c-ink-900); border-radius: var(--r-sm); padding: 0.75rem; min-width: 140px;">
+                        <div style="text-align: center; background: rgba(255,255,255,0.9); border: 2px solid var(--c-ink-900); border-radius: var(--r-sm); padding: 0.75rem; min-width: 160px;">
                             <div style="font-size: 1.8rem; font-weight: bold; color: var(--c-forest-700); line-height: 1;">${passengers.length}/${kidSpots}</div>
                             <div style="font-size: 0.75rem; color: var(--c-ink-600); margin-top: 0.25rem;">Enfants ${direction === 'outbound' ? 'aller' : 'retour'}</div>
-                            <div style="margin-top: 0.5rem; font-size: 0.85rem;">
-                                <div style="color: var(--c-ink-700);">👨‍👩‍👧 ${adultSpots} adultes</div>
-                                <div style="color: var(--c-ink-700);">👶 ${kidSpots} enfants</div>
+                            <div style="margin-top: 0.5rem; font-size: 0.9rem; line-height: 1.4;">
+                                <div style="color: var(--c-ink-700); font-weight: 600;">🧑‍🤝‍🧑 ${adultEntries.length}/${adultSpots} adultes</div>
+                                <div style="color: var(--c-ink-700); font-weight: 600;">👶 ${passengers.length}/${kidSpots} enfants</div>
                             </div>
-                            <div style="margin-top: 0.5rem; font-size: 0.9rem; font-weight: bold; color: ${(remainingSeats) > 0 ? '#2E7D32' : '#F44336'};">
-                                ${remainingSeats} place(s) libre(s)
+                            <div style="margin-top: 0.5rem; font-size: 0.9rem; font-weight: bold; color: ${(remainingChildSeats) > 0 ? '#2E7D32' : '#F44336'};">
+                                ${remainingChildSeats} place(s) enfant libre(s)
+                            </div>
+                            <div style="margin-top: 0.25rem; font-size: 0.9rem; font-weight: bold; color: ${(remainingAdultSeats) > 0 ? '#2E7D32' : '#F44336'};">
+                                ${remainingAdultSeats} place(s) adulte libre(s)
                             </div>
                         </div>
                     </div>
@@ -755,6 +781,39 @@ function renderDrivers() {
                                 }).join('')}
                             </div>
                         ` : '<div class="fey-note" style="margin-top: 0.5rem; padding: 1rem; text-align: center;">Aucun enfant affecté pour le moment.</div>'}
+                    </div>
+                    <div style="margin-top: 1.5rem;">
+                        <div style="font-weight: bold; font-size: 1.1rem; color: var(--c-forest-700); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <span>🧑‍🤝‍🧑</span>
+                            <span>Adultes inscrits</span>
+                        </div>
+                        ${adultEntries.length ? `
+                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem;">
+                                ${adultEntries.map(participant => {
+                                    return `
+                                        <div style="background: rgba(255,255,255,0.95); border: 2px solid var(--c-ink-900); border-radius: var(--r-sm); padding: 0.75rem; display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
+                                            <div style="font-weight: bold; font-size: 0.95rem; color: var(--c-forest-700); flex: 1;">
+                                                ${escapeHtml(participant.participant_name || participant.name || 'Adulte')}
+                                            </div>
+                                            <button type="button" class="fey-btn adult-remove-btn" data-participant-id="${participant.id}" style="background: #F44336; padding: 0.4rem 0.75rem; font-size: 0.85rem;">🗑️ Retirer</button>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        ` : '<div class="fey-note" style="margin-top: 0.5rem; padding: 1rem; text-align: center;">Aucun adulte inscrit pour ce trajet.</div>'}
+                        <div style="margin-top: 0.75rem;">
+                            ${(adultSpots > 0 && remainingAdultSeats > 0) ? `
+                                <form class="adult-add-form" data-driver-id="${driver.id}" data-direction="${direction}" style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
+                                    <input type="text" name="adultName" placeholder="Nom de l'adulte" autocomplete="off" required style="flex: 1 1 220px; padding: 0.55rem 0.65rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm); font-size: 0.95rem;">
+                                    <button type="submit" class="fey-btn adult-add-btn" style="background: #2E7D32; padding: 0.55rem 1rem;">Ajouter un adulte</button>
+                                </form>
+                            ` : `
+                                <div class="fey-note adult-no-slot" data-driver-id="${driver.id}" data-direction="${direction}" style="padding: 0.75rem; text-align: center; border: 2px dashed var(--c-ink-900); background: rgba(255,255,255,0.85); color: #F44336;">
+                                    Aucune place adulte disponible
+                                </div>
+                            `}
+                            <div class="adult-error-message" data-driver-id="${driver.id}" data-direction="${direction}" style="display: none; margin-top: 0.5rem; color: #F44336; font-weight: bold;"></div>
+                        </div>
                     </div>
                     <div style="display: flex; justify-content: flex-end; margin-top: 1rem; padding-top: 1rem; border-top: 2px dashed var(--c-ink-900);">
                         <button type="button" class="fey-btn driver-delete-btn" data-driver-id="${driver.id}" style="background: #F44336; padding: 0.65rem 1.25rem;">🗑️ Supprimer la voiture</button>
@@ -796,6 +855,14 @@ function renderDrivers() {
                 dropZone.addEventListener('dragover', handleDriverDragOver);
                 dropZone.addEventListener('dragleave', handleDriverDragLeave);
                 dropZone.addEventListener('drop', handleDriverDrop);
+            });
+
+            container.querySelectorAll('.adult-add-form').forEach(form => {
+                form.addEventListener('submit', handleAdultAdd);
+            });
+
+            container.querySelectorAll('.adult-remove-btn').forEach(button => {
+                button.addEventListener('click', handleAdultRemove);
             });
         });
     }
@@ -928,6 +995,109 @@ function renderDrivers() {
         } catch (error) {
             console.error(`${LOG_PREFIX} Erreur suppression passager`, error);
             notify(error.message || 'Impossible de supprimer le passager.', 'error');
+        }
+    }
+
+    async function handleAdultAdd(event) {
+        event.preventDefault();
+        if (!state.selectedOutingId) {
+            notify('Veuillez d\'abord sélectionner une sortie.', 'error');
+            return;
+        }
+
+        const form = event.currentTarget;
+        const driverId = form.dataset.driverId;
+        const directionRaw = form.dataset.direction || 'outbound';
+        const normalizedDirection = normalizeDirection(directionRaw, { allowRoundTrip: false, defaultDirection: 'outbound' });
+        const input = form.querySelector('input[name="adultName"]');
+        const errorContainer = form.parentElement ? form.parentElement.querySelector('.adult-error-message') : null;
+        if (errorContainer) {
+            errorContainer.textContent = '';
+            errorContainer.style.display = 'none';
+        }
+
+        const rawName = input ? input.value.trim() : '';
+        if (!rawName) {
+            if (input) {
+                input.focus();
+            }
+            const message = 'Veuillez saisir un nom.';
+            if (errorContainer) {
+                errorContainer.textContent = message;
+                errorContainer.style.display = 'block';
+            } else {
+                notify(message, 'error');
+            }
+            return;
+        }
+
+        const driver = state.drivers.find(d => sameId(d.id, driverId));
+        if (!driver) {
+            notify('Voiture introuvable.', 'error');
+            return;
+        }
+
+        const adultSpots = driver.adult_spots || 0;
+        const assignedAdults = (state.adultParticipants || []).filter(participant => {
+            if (!participant || !participant.is_adult) return false;
+            if (!sameId(participant.car_id, driver.id)) return false;
+            if (typeof CarpoolManager.participantMatchesDirection === 'function') {
+                return CarpoolManager.participantMatchesDirection(participant, normalizedDirection);
+            }
+            const participantDirection = normalizeDirection(participant.direction, {
+                allowRoundTrip: false,
+                defaultDirection: normalizedDirection
+            });
+            return participantDirection === normalizedDirection;
+        }).length;
+        const remaining = Math.max(0, adultSpots - assignedAdults);
+
+        if (remaining <= 0) {
+            const message = 'Aucune place adulte disponible';
+            if (errorContainer) {
+                errorContainer.textContent = message;
+                errorContainer.style.display = 'block';
+            } else {
+                notify(message, 'error');
+            }
+            return;
+        }
+
+        try {
+            await CarpoolManager.createParticipant({
+                outing_id: state.selectedOutingId,
+                car_id: driverId,
+                participant_name: rawName,
+                is_adult: true,
+                direction: normalizedDirection
+            });
+            if (input) {
+                input.value = '';
+            }
+            await loadOutingData(true);
+        } catch (error) {
+            console.error(`${LOG_PREFIX} Erreur ajout adulte`, error);
+            const message = error?.message || 'Impossible d\'ajouter l\'adulte.';
+            if (errorContainer) {
+                errorContainer.textContent = message;
+                errorContainer.style.display = 'block';
+            } else {
+                notify(message, 'error');
+            }
+        }
+    }
+
+    async function handleAdultRemove(event) {
+        const participantId = event.currentTarget.dataset.participantId;
+        if (!participantId) {
+            return;
+        }
+        try {
+            await CarpoolManager.deleteParticipant(participantId);
+            await loadOutingData(true);
+        } catch (error) {
+            console.error(`${LOG_PREFIX} Erreur suppression adulte`, error);
+            notify(error?.message || 'Impossible de retirer l\'adulte.', 'error');
         }
     }
 
@@ -1325,4 +1495,44 @@ function renderDrivers() {
         attachEvents();
         loadOutings();
     });
+    // === Capacity editor for drivers (kid seats) ===
+    function initCapacityEditorsForContainer(container, direction) {
+        if (!container) return;
+        container.querySelectorAll('.driver-drop-zone').forEach(dropZone => {
+            try {
+                if (dropZone.querySelector('.driver-capacity-editor')) return;
+                const driverId = dropZone.dataset.driverId;
+                const dir = dropZone.dataset.direction || direction;
+                const driver = (state.drivers || []).find(d => CarpoolManager.sameId(d.id, driverId));
+                if (!driver) return;
+
+                const dirPassengers = (state.passengers || []).filter(p =>
+                    CarpoolManager.passengerMatchesDirection(p, dir)
+                );
+                const assignedCount = dirPassengers.filter(p => CarpoolManager.sameId(p.driver_id, driverId)).length;
+                const currentSpots = parseInt(driver.kid_spots || driver.seats_available || driver.childSeats || 0, 10) || 0;
+
+                // Removed inline capacity summary to avoid duplication with the full editor.
+            } catch (e) {
+                console.warn('[CarpoolUI] capacity editor init failed', e);
+            }
+        });
+    }
+
+    function enableCapacityEditors() {
+        const targets = [
+            { el: dom?.driversListOutbound, dir: 'outbound' },
+            { el: dom?.driversListReturn, dir: 'return' }
+        ];
+        targets.forEach(t => {
+            if (!t.el) return;
+            const obs = new MutationObserver(() => initCapacityEditorsForContainer(t.el, t.dir));
+            obs.observe(t.el, { childList: true, subtree: true });
+            initCapacityEditorsForContainer(t.el, t.dir);
+        });
+    }
+
+    // Enable capacity editors after initial render
+    try { ready(() => { setTimeout(() => { try { enableCapacityEditors(); } catch (e) {} }, 0); }); } catch (e) {}
+
 })();

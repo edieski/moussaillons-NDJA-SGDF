@@ -17,6 +17,10 @@
     let tripsCache = [];
     let driversCache = {};
     let passengersCache = {};
+    let participantsCache = {};
+    let participantsTableSupported = true;
+
+    const PARTICIPANTS_TABLE = 'carpool_participants';
 
     // ============================================
     // UTILITAIRES
@@ -91,6 +95,21 @@
         return {
             ...row,
             direction
+        };
+    }
+
+    function normalizeParticipantRow(row) {
+        if (!row) return null;
+        const direction = normalizeDirection(row.direction, {
+            allowRoundTrip: true,
+            defaultDirection: DIRECTIONS.OUTBOUND
+        });
+        return {
+            ...row,
+            direction,
+            participant_name: row.participant_name ?? row.name ?? '',
+            car_id: row.car_id ?? row.driver_id ?? null,
+            is_adult: row.is_adult === true
         };
     }
 
@@ -467,6 +486,18 @@
 
             if (detachError) throw detachError;
 
+            let affectedParticipants = [];
+            if (participantsTableSupported) {
+                const { data: removedParticipants, error: participantError } = await supabase
+                    .from(PARTICIPANTS_TABLE)
+                    .delete()
+                    .eq('car_id', driverId)
+                    .select('id, outing_id');
+
+                if (participantError) throw participantError;
+                affectedParticipants = removedParticipants || [];
+            }
+
             const { error } = await supabase
                 .from('carpool_drivers')
                 .delete()
@@ -495,9 +526,20 @@
                 });
             }
 
+            if (Array.isArray(affectedParticipants) && affectedParticipants.length) {
+                affectedParticipants.forEach(participant => {
+                    const tripId = normalizeId(participant.outing_id);
+                    if (!tripId || !Array.isArray(participantsCache[tripId])) {
+                        return;
+                    }
+                    participantsCache[tripId] = participantsCache[tripId].filter(item => !sameId(item.id, participant.id));
+                });
+            }
+
             log('Conducteur supprimé et passagers détachés', {
                 driverId,
-                detachedPassengers: affectedPassengers ? affectedPassengers.length : 0
+                detachedPassengers: affectedPassengers ? affectedPassengers.length : 0,
+                removedAdultParticipants: affectedParticipants ? affectedParticipants.length : 0
             });
             notify('Conducteur supprimé. Les enfants ont été replacés dans la liste sans voiture.', 'success');
             return true;
@@ -662,6 +704,132 @@
     }
 
     // ============================================
+    // GESTION DES PARTICIPANTS (ADULTES)
+    // ============================================
+
+    async function loadParticipants(outingId, force = false) {
+        log('Chargement des participants...', outingId);
+
+        if (!participantsTableSupported) {
+            participantsCache[outingId] = [];
+            return [];
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from(PARTICIPANTS_TABLE)
+                .select('*')
+                .eq('outing_id', outingId)
+                .order('created_at', { ascending: true });
+
+            if (error) throw error;
+
+            const rows = (data || [])
+                .map(normalizeParticipantRow)
+                .filter(Boolean);
+
+            participantsCache[outingId] = rows;
+            log(`${rows.length} participant(s) chargé(s)`, rows);
+            return rows;
+        } catch (error) {
+            participantsCache[outingId] = [];
+            if (error && typeof error.message === 'string' && /carpool_participants/i.test(error.message)) {
+                participantsTableSupported = false;
+                console.warn(`${LOG_PREFIX} Table ${PARTICIPANTS_TABLE} indisponible ou non migrée`, error);
+                return [];
+            }
+            console.error(`${LOG_PREFIX} Erreur chargement participants`, error);
+            notify(`Erreur de chargement: ${error.message}`, 'error');
+            return [];
+        }
+    }
+
+    async function createParticipant(participantData) {
+        log('Création d\'un participant...', participantData);
+
+        if (!participantsTableSupported) {
+            notify('La gestion des participants adultes n\'est pas disponible sur cette instance.', 'error');
+            return null;
+        }
+
+        try {
+            const outingId = participantData.outing_id || participantData.trip_id;
+            const direction = normalizeDirection(
+                participantData.direction,
+                { allowRoundTrip: true, defaultDirection: DIRECTIONS.OUTBOUND }
+            );
+
+            const insertPayload = {
+                outing_id: outingId,
+                car_id: participantData.car_id || participantData.driver_id || null,
+                participant_name: participantData.participant_name || participantData.name,
+                is_adult: participantData.is_adult ?? false,
+                direction
+            };
+
+            const { data, error } = await supabase
+                .from(PARTICIPANTS_TABLE)
+                .insert(insertPayload)
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            const normalized = normalizeParticipantRow(data);
+            if (!participantsCache[outingId]) {
+                participantsCache[outingId] = [];
+            }
+            if (normalized) {
+                participantsCache[outingId].push(normalized);
+            }
+
+            log('Participant créé', normalized || data);
+            notify('Participant ajouté avec succès', 'success');
+            return normalized || data;
+        } catch (error) {
+            if (error && typeof error.message === 'string' && /carpool_participants/i.test(error.message)) {
+                participantsTableSupported = false;
+                console.error(`${LOG_PREFIX} Table ${PARTICIPANTS_TABLE} indisponible`, error);
+                notify('La table des participants n\'est pas disponible. Veuillez appliquer la migration.', 'error');
+                return null;
+            }
+            console.error(`${LOG_PREFIX} Erreur création participant`, error);
+            notify(`Impossible d'ajouter le participant: ${error.message}`, 'error');
+            return null;
+        }
+    }
+
+    async function deleteParticipant(participantId, outingId) {
+        log('Suppression d\'un participant...', { participantId, outingId });
+
+        if (!participantsTableSupported) {
+            notify('La gestion des participants adultes n\'est pas disponible sur cette instance.', 'error');
+            return false;
+        }
+
+        try {
+            const { error } = await supabase
+                .from(PARTICIPANTS_TABLE)
+                .delete()
+                .eq('id', participantId);
+
+            if (error) throw error;
+
+            Object.keys(participantsCache).forEach(tripId => {
+                participantsCache[tripId] = (participantsCache[tripId] || []).filter(p => !sameId(p.id, participantId));
+            });
+
+            log('Participant supprimé');
+            notify('Participant retiré avec succès', 'success');
+            return true;
+        } catch (error) {
+            console.error(`${LOG_PREFIX} Erreur suppression participant`, error);
+            notify(`Impossible de supprimer: ${error.message}`, 'error');
+            return false;
+        }
+    }
+
+    // ============================================
     // FONCTIONS UTILITAIRES
     // ============================================
 
@@ -691,6 +859,14 @@
         return passengerDirection === targetDirection;
     }
 
+    function participantMatchesDirection(participant, direction) {
+        if (!participant) return false;
+        return passengerMatchesDirection(
+            { direction: participant.direction ?? participant.roundTrip },
+            direction
+        );
+    }
+
     function getRemainingSeats(driver, passengers) {
         const seats = driver.seats_available || 0;
         const assigned = passengers.filter(p => sameId(p.driver_id, driver.id)).length;
@@ -713,10 +889,26 @@
         return passengers.filter(p => sameId(p.driver_id, driverId));
     }
 
+    function getParticipants(tripId) {
+        return participantsCache[tripId] ? [...participantsCache[tripId]] : [];
+    }
+
+    function getParticipantsByDriver(tripId, driverId) {
+        const participants = participantsCache[tripId] || [];
+        return participants.filter(p => sameId(p.car_id, driverId));
+    }
+
+    function countAdultParticipantsForDirection(tripId, driverId, direction) {
+        const participants = participantsCache[tripId] || [];
+        return participants.filter(participant => participant.is_adult && sameId(participant.car_id, driverId) && participantMatchesDirection(participant, direction)).length;
+    }
+
     function clearCache() {
         tripsCache = [];
         driversCache = {};
         passengersCache = {};
+        participantsCache = {};
+        participantsTableSupported = true;
         log('Cache vidé');
     }
 
@@ -745,6 +937,15 @@
         updatePassenger,
         deletePassenger,
         getPassengers: (tripId) => passengersCache[tripId] ? [...passengersCache[tripId]] : [],
+
+        // Participants (adultes)
+        loadParticipants,
+        createParticipant,
+        deleteParticipant,
+        getParticipants,
+        getParticipantsByDriver,
+        countAdultParticipantsForDirection,
+        participantMatchesDirection,
         
         // Utilitaires
         getRemainingSeats,
