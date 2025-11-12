@@ -50,6 +50,9 @@ body {
     overflow-x: hidden;
 }
 
+html { scroll-behavior: smooth; }
+a, button { -webkit-tap-highlight-color: transparent; }
+
 /* Décor animé - Optimisé pour les performances */
 .fey-leaves {
     position: fixed;
@@ -415,7 +418,11 @@ body {
     margin-bottom: 2rem;
     flex-wrap: wrap;
     justify-content: center;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
+
+.fey-nav::-webkit-scrollbar { display: none; }
 
 .fey-tab {
     background: var(--c-wood-200);
@@ -615,6 +622,7 @@ body {
     box-shadow: 4px 4px 0 rgba(30, 30, 30, 0.3);
     position: relative;
     transition: all var(--m-base) var(--m-ease);
+    overflow-wrap: anywhere;
 }
 
 .fey-card:hover {
@@ -952,4 +960,74 @@ body {
 #zone-depot:hover, #zone-depot-priere:hover {
     background: rgba(247, 127, 0, 0.2) !important;
     border-color: var(--c-orange-600) !important;
+}
+
+/* =============================
+   Responsive enhancements
+   ============================= */
+
+/* Base fluid media */
+img, video { max-width: 100%; height: auto; }
+
+/* Mobile-first adjustments */
+@media (max-width: 768px) {
+  body { padding: 0.5rem; }
+
+  .fey-container { padding: 0.75rem; border-width: 2px; }
+  .fey-title { font-size: 2rem; }
+  .fey-subtitle { font-size: 1rem; margin-bottom: 1rem; }
+
+  .fey-nav { gap: 0.4rem; }
+  .fey-tab { font-size: 1rem; padding: 0.6rem 0.9rem; }
+  /* Make nav usable on mobile */
+  .fey-nav { position: sticky; top: env(safe-area-inset-top, 0); z-index: 50; background: rgba(250,243,224,0.95); padding: 0.4rem; border-bottom: 2px solid var(--c-wood-200); }
+  .fey-tab { white-space: nowrap; }
+
+  .fey-stats { gap: 0.5rem; }
+  .fey-stat { padding: 1rem; min-width: 120px; }
+
+  .fey-card { padding: 1rem; }
+  .fey-card-header { font-size: 1.3rem; }
+  .fey-note { font-size: 0.95rem; }
+
+  .fey-btn { min-height: 44px; padding: 0.6rem 1.1rem; font-size: 1rem; }
+
+  /* Override inline multi-column grids within cards to single column on mobile */
+  .fey-card [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+
+  /* Two-column sections: force single column */
+  [style*="grid-template-columns: 2fr 1fr"],
+  [style*="grid-template-columns: 1fr 2fr"] { grid-template-columns: 1fr !important; }
+
+  /* Generic flex rows inside cards stack vertically */
+  .fey-card [style*="display: flex"] { flex-wrap: wrap; }
+  .fey-card [style*="display: flex"][style*="justify-content:"] { gap: 0.75rem; }
+
+  /* Form controls: easy to tap and avoid iOS zoom */
+  .fey-card input,
+  .fey-card select,
+  .fey-card textarea { font-size: 16px; min-height: 44px; width: 100%; }
+
+  /* Tables or wide blocks can scroll horizontally */
+  .fey-card .scroll-x,
+  .fey-page .scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* Soften animated background on small screens */
+  .fairy-sparkles, .fey-leaves, .magic-trees, .fairy-wings { opacity: 0.5; }
+}
+
+@media (max-width: 480px) {
+  .fey-title { font-size: 1.7rem; }
+  .fey-tab { font-size: 0.95rem; padding: 0.55rem 0.8rem; }
+  .fey-card { padding: 0.85rem; }
+  .fey-card-header { font-size: 1.2rem; }
+  .fey-btn { width: 100%; text-align: center; }
+
+  /* Tighten stat blocks */
+  .fey-stat { flex: 1 1 120px; }
+}
+
+/* Respect reduced motion preferences (and improve mobile perf) */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
 }

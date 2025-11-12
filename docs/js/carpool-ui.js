@@ -711,7 +711,7 @@ function renderDrivers() {
 
             const adultEntries = (state.adultParticipants || []).filter(participant => {
                 if (!participant || !participant.is_adult) return false;
-                if (!sameId(participant.car_id, driver.id)) return false;
+                if (!sameId(participant.driver_id, driver.id)) return false;
                 if (typeof CarpoolManager.participantMatchesDirection === 'function') {
                     return CarpoolManager.participantMatchesDirection(participant, direction);
                 }
@@ -793,7 +793,7 @@ function renderDrivers() {
                                     return `
                                         <div style="background: rgba(255,255,255,0.95); border: 2px solid var(--c-ink-900); border-radius: var(--r-sm); padding: 0.75rem; display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
                                             <div style="font-weight: bold; font-size: 0.95rem; color: var(--c-forest-700); flex: 1;">
-                                                ${escapeHtml(participant.participant_name || participant.name || 'Adulte')}
+                                                ${escapeHtml(participant.child_name || participant.name || 'Adulte')}
                                             </div>
                                             <button type="button" class="fey-btn adult-remove-btn" data-participant-id="${participant.id}" style="background: #F44336; padding: 0.4rem 0.75rem; font-size: 0.85rem;">🗑️ Retirer</button>
                                         </div>
@@ -1040,7 +1040,7 @@ function renderDrivers() {
         const adultSpots = driver.adult_spots || 0;
         const assignedAdults = (state.adultParticipants || []).filter(participant => {
             if (!participant || !participant.is_adult) return false;
-            if (!sameId(participant.car_id, driver.id)) return false;
+            if (!sameId(participant.driver_id, driver.id)) return false;
             if (typeof CarpoolManager.participantMatchesDirection === 'function') {
                 return CarpoolManager.participantMatchesDirection(participant, normalizedDirection);
             }
@@ -1066,7 +1066,7 @@ function renderDrivers() {
         try {
             await CarpoolManager.createParticipant({
                 outing_id: state.selectedOutingId,
-                car_id: driverId,
+                driver_id: driverId,
                 participant_name: rawName,
                 is_adult: true,
                 direction: normalizedDirection

@@ -17,10 +17,6 @@
     let tripsCache = [];
     let driversCache = {};
     let passengersCache = {};
-    let participantsCache = {};
-    let participantsTableSupported = true;
-
-    const PARTICIPANTS_TABLE = 'carpool_participants';
 
     // ============================================
     // UTILITAIRES
@@ -98,20 +94,6 @@
         };
     }
 
-    function normalizeParticipantRow(row) {
-        if (!row) return null;
-        const direction = normalizeDirection(row.direction, {
-            allowRoundTrip: true,
-            defaultDirection: DIRECTIONS.OUTBOUND
-        });
-        return {
-            ...row,
-            direction,
-            participant_name: row.participant_name ?? row.name ?? '',
-            car_id: row.car_id ?? row.driver_id ?? null,
-            is_adult: row.is_adult === true
-        };
-    }
 
     // ============================================
     // GESTION DES SORTIES (using OutingsService)
@@ -477,26 +459,25 @@
         log('Suppression d\'un conducteur...', driverId);
         
         try {
-            // Détacher les passagers assignés à ce conducteur
+            // Détacher les passagers (enfants) assignés à ce conducteur
             const { data: affectedPassengers, error: detachError } = await supabase
                 .from('carpool_passengers')
                 .update({ driver_id: null })
                 .eq('driver_id', driverId)
+                .eq('is_adult', false) // Only children, not adults
                 .select('id, outing_id');
 
             if (detachError) throw detachError;
 
-            let affectedParticipants = [];
-            if (participantsTableSupported) {
-                const { data: removedParticipants, error: participantError } = await supabase
-                    .from(PARTICIPANTS_TABLE)
-                    .delete()
-                    .eq('car_id', driverId)
-                    .select('id, outing_id');
+            // Supprimer les participants adultes assignés à ce conducteur
+            const { data: affectedParticipants, error: participantError } = await supabase
+                .from('carpool_passengers')
+                .delete()
+                .eq('driver_id', driverId)
+                .eq('is_adult', true) // Only adults
+                .select('id, outing_id');
 
-                if (participantError) throw participantError;
-                affectedParticipants = removedParticipants || [];
-            }
+            if (participantError) throw participantError;
 
             const { error } = await supabase
                 .from('carpool_drivers')
@@ -510,29 +491,23 @@
                 driversCache[tripId] = (driversCache[tripId] || []).filter(d => !sameId(d.id, driverId));
             });
 
-            // Mettre à jour le cache des passagers
+            // Invalider le cache des passagers pour forcer le rechargement
             if (Array.isArray(affectedPassengers) && affectedPassengers.length) {
                 affectedPassengers.forEach(passenger => {
                     const tripId = normalizeId(passenger.outing_id);
-                    if (!tripId || !Array.isArray(passengersCache[tripId])) {
-                        return;
+                    if (tripId && passengersCache[tripId]) {
+                        delete passengersCache[tripId];
                     }
-                    passengersCache[tripId] = passengersCache[tripId].map(p => {
-                        if (sameId(p.id, passenger.id)) {
-                            return { ...p, driver_id: null };
-                        }
-                        return p;
-                    });
                 });
             }
 
+            // Invalider le cache pour les participants adultes supprimés
             if (Array.isArray(affectedParticipants) && affectedParticipants.length) {
                 affectedParticipants.forEach(participant => {
                     const tripId = normalizeId(participant.outing_id);
-                    if (!tripId || !Array.isArray(participantsCache[tripId])) {
-                        return;
+                    if (tripId && passengersCache[tripId]) {
+                        delete passengersCache[tripId];
                     }
-                    participantsCache[tripId] = participantsCache[tripId].filter(item => !sameId(item.id, participant.id));
                 });
             }
 
@@ -704,53 +679,38 @@
     }
 
     // ============================================
-    // GESTION DES PARTICIPANTS (ADULTES)
+    // GESTION DES PARTICIPANTS ADULTES
+    // Utilise la table carpool_passengers avec is_adult = true
     // ============================================
 
     async function loadParticipants(outingId, force = false) {
-        log('Chargement des participants...', outingId);
-
-        if (!participantsTableSupported) {
-            participantsCache[outingId] = [];
-            return [];
-        }
+        log('Chargement des participants adultes...', outingId);
 
         try {
             const { data, error } = await supabase
-                .from(PARTICIPANTS_TABLE)
+                .from('carpool_passengers')
                 .select('*')
                 .eq('outing_id', outingId)
+                .eq('is_adult', true)
                 .order('created_at', { ascending: true });
 
             if (error) throw error;
 
             const rows = (data || [])
-                .map(normalizeParticipantRow)
+                .map(normalizePassengerRow)
                 .filter(Boolean);
 
-            participantsCache[outingId] = rows;
-            log(`${rows.length} participant(s) chargé(s)`, rows);
+            log(`${rows.length} participant(s) adulte(s) chargé(s)`, rows);
             return rows;
         } catch (error) {
-            participantsCache[outingId] = [];
-            if (error && typeof error.message === 'string' && /carpool_participants/i.test(error.message)) {
-                participantsTableSupported = false;
-                console.warn(`${LOG_PREFIX} Table ${PARTICIPANTS_TABLE} indisponible ou non migrée`, error);
-                return [];
-            }
-            console.error(`${LOG_PREFIX} Erreur chargement participants`, error);
+            console.error(`${LOG_PREFIX} Erreur chargement participants adultes`, error);
             notify(`Erreur de chargement: ${error.message}`, 'error');
             return [];
         }
     }
 
     async function createParticipant(participantData) {
-        log('Création d\'un participant...', participantData);
-
-        if (!participantsTableSupported) {
-            notify('La gestion des participants adultes n\'est pas disponible sur cette instance.', 'error');
-            return null;
-        }
+        log('Création d\'un participant adulte...', participantData);
 
         try {
             const outingId = participantData.outing_id || participantData.trip_id;
@@ -761,69 +721,62 @@
 
             const insertPayload = {
                 outing_id: outingId,
-                car_id: participantData.car_id || participantData.driver_id || null,
-                participant_name: participantData.participant_name || participantData.name,
-                is_adult: participantData.is_adult ?? false,
-                direction
+                driver_id: participantData.car_id || participantData.driver_id || null,
+                child_id: null, // Adults don't have a child_id
+                child_name: participantData.participant_name || participantData.name || '',
+                guardian_name: '',
+                guardian_phone: '',
+                notes: '',
+                direction: direction,
+                is_adult: true
             };
 
             const { data, error } = await supabase
-                .from(PARTICIPANTS_TABLE)
+                .from('carpool_passengers')
                 .insert(insertPayload)
                 .select()
                 .single();
 
             if (error) throw error;
 
-            const normalized = normalizeParticipantRow(data);
-            if (!participantsCache[outingId]) {
-                participantsCache[outingId] = [];
-            }
-            if (normalized) {
-                participantsCache[outingId].push(normalized);
+            // Invalidate cache to force reload
+            if (passengersCache[outingId]) {
+                delete passengersCache[outingId];
             }
 
-            log('Participant créé', normalized || data);
-            notify('Participant ajouté avec succès', 'success');
+            const normalized = normalizePassengerRow(data);
+            log('Participant adulte créé', normalized || data);
+            notify('Adulte ajouté avec succès', 'success');
             return normalized || data;
         } catch (error) {
-            if (error && typeof error.message === 'string' && /carpool_participants/i.test(error.message)) {
-                participantsTableSupported = false;
-                console.error(`${LOG_PREFIX} Table ${PARTICIPANTS_TABLE} indisponible`, error);
-                notify('La table des participants n\'est pas disponible. Veuillez appliquer la migration.', 'error');
-                return null;
-            }
-            console.error(`${LOG_PREFIX} Erreur création participant`, error);
-            notify(`Impossible d'ajouter le participant: ${error.message}`, 'error');
+            console.error(`${LOG_PREFIX} Erreur création participant adulte`, error);
+            notify(`Impossible d'ajouter l'adulte: ${error.message}`, 'error');
             return null;
         }
     }
 
     async function deleteParticipant(participantId, outingId) {
-        log('Suppression d\'un participant...', { participantId, outingId });
-
-        if (!participantsTableSupported) {
-            notify('La gestion des participants adultes n\'est pas disponible sur cette instance.', 'error');
-            return false;
-        }
+        log('Suppression d\'un participant adulte...', { participantId, outingId });
 
         try {
             const { error } = await supabase
-                .from(PARTICIPANTS_TABLE)
+                .from('carpool_passengers')
                 .delete()
-                .eq('id', participantId);
+                .eq('id', participantId)
+                .eq('is_adult', true); // Safety check: only delete adults
 
             if (error) throw error;
 
-            Object.keys(participantsCache).forEach(tripId => {
-                participantsCache[tripId] = (participantsCache[tripId] || []).filter(p => !sameId(p.id, participantId));
-            });
+            // Invalidate cache to force reload
+            if (outingId && passengersCache[outingId]) {
+                delete passengersCache[outingId];
+            }
 
-            log('Participant supprimé');
-            notify('Participant retiré avec succès', 'success');
+            log('Participant adulte supprimé');
+            notify('Adulte retiré avec succès', 'success');
             return true;
         } catch (error) {
-            console.error(`${LOG_PREFIX} Erreur suppression participant`, error);
+            console.error(`${LOG_PREFIX} Erreur suppression participant adulte`, error);
             notify(`Impossible de supprimer: ${error.message}`, 'error');
             return false;
         }
@@ -890,25 +843,28 @@
     }
 
     function getParticipants(tripId) {
-        return participantsCache[tripId] ? [...participantsCache[tripId]] : [];
+        const passengers = passengersCache[tripId] || [];
+        return passengers.filter(p => p.is_adult === true);
     }
 
     function getParticipantsByDriver(tripId, driverId) {
-        const participants = participantsCache[tripId] || [];
-        return participants.filter(p => sameId(p.car_id, driverId));
+        const passengers = passengersCache[tripId] || [];
+        return passengers.filter(p => p.is_adult === true && sameId(p.driver_id, driverId));
     }
 
     function countAdultParticipantsForDirection(tripId, driverId, direction) {
-        const participants = participantsCache[tripId] || [];
-        return participants.filter(participant => participant.is_adult && sameId(participant.car_id, driverId) && participantMatchesDirection(participant, direction)).length;
+        const passengers = passengersCache[tripId] || [];
+        return passengers.filter(p => 
+            p.is_adult === true && 
+            sameId(p.driver_id, driverId) && 
+            participantMatchesDirection(p, direction)
+        ).length;
     }
 
     function clearCache() {
         tripsCache = [];
         driversCache = {};
         passengersCache = {};
-        participantsCache = {};
-        participantsTableSupported = true;
         log('Cache vidé');
     }
 
