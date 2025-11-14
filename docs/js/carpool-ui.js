@@ -28,6 +28,12 @@
         dateStyle: 'medium'
     });
 
+    const DIRECTION_LABELS = Object.freeze({
+        outbound: 'Aller',
+        return: 'Retour',
+        'round-trip': 'Aller & Retour'
+    });
+
     function notify(message, type = 'info') {
         if (typeof showNotification === 'function') {
             showNotification(message, type);
@@ -81,6 +87,13 @@
         }
 
         return defaultDirection;
+    }
+
+    function formatPhoneForCsv(value) {
+        if (!value && value !== 0) return '';
+        const stringValue = value.toString().trim();
+        if (!stringValue) return '';
+        return `\t${stringValue}`;
     }
 
     function titleCase(name) {
@@ -144,6 +157,69 @@
 
     function normalizeId(value) {
         return value == null ? null : String(value);
+    }
+
+    function escapeCsv(value) {
+        const stringValue = value == null ? '' : String(value);
+        return `"${stringValue.replace(/"/g, '""')}"`;
+    }
+
+    function downloadCsv(filename, rows) {
+        if (!Array.isArray(rows) || rows.length === 0) {
+            return;
+        }
+        const csvBody = rows.map(row => row.map(escapeCsv).join(',')).join('\r\n');
+        const csvContent = `\uFEFF${csvBody}`;
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+
+    function findSelectedOuting() {
+        if (!state.selectedOutingId) return null;
+        const target = state.selectedOutingId.toString();
+        return state.outings.find(outing => {
+            const candidates = [outing.id, outing.slug];
+            return candidates.some(value => value != null && value.toString() === target);
+        }) || null;
+    }
+
+    function getSelectedOutingLabel() {
+        const outing = findSelectedOuting();
+        if (outing) {
+            return formatOutingLabel(outing) || outing.title || outing.name || 'Sortie';
+        }
+        if (dom.outingSelect) {
+            const option = dom.outingSelect.options[dom.outingSelect.selectedIndex];
+            if (option) {
+                return option.textContent || option.value || 'Sortie';
+            }
+        }
+        return 'Sortie';
+    }
+
+    function getDriverDirectionLabel(driver) {
+        const outbound = typeof CarpoolManager?.isDriverOutbound === 'function'
+            ? CarpoolManager.isDriverOutbound(driver)
+            : true;
+        const ret = typeof CarpoolManager?.isDriverReturn === 'function'
+            ? CarpoolManager.isDriverReturn(driver)
+            : true;
+        if (outbound && ret) return 'Aller & Retour';
+        if (outbound) return 'Aller seulement';
+        if (ret) return 'Retour seulement';
+        return 'Trajet non précisé';
+    }
+
+    function formatPassengerDirectionLabel(passenger) {
+        const direction = getPassengerDirection(passenger);
+        return DIRECTION_LABELS[direction] || 'Trajet';
     }
 
     function formatOutingLabel(outing) {
@@ -386,6 +462,7 @@
         if (dom.passengerDriverSelect) {
             dom.passengerDriverSelect.innerHTML = '<option value="">Je n\'ai pas encore de conducteur</option>';
         }
+        updateExportButtonState();
     }
 
     async function loadConfirmedRegistrations(force = false) {
@@ -545,6 +622,7 @@
             notify(error.message || 'Impossible de récupérer les données de covoiturage.', 'error');
         } finally {
             state.loading = false;
+            updateExportButtonState();
         }
     }
 
@@ -689,6 +767,123 @@
         `).join('');
 
         dom.summaryCard.style.display = 'block';
+        updateExportButtonState();
+    }
+
+    function buildCarpoolCsvRows() {
+        if (!state.selectedOutingId) return [];
+        const outingLabel = getSelectedOutingLabel();
+        const header = ['Sortie', 'Enfant', 'Conducteur', 'Téléphone conducteur', 'Trajet(s)', 'Parent/Tuteur', 'Téléphone parent', 'Notes'];
+        const rows = [header];
+
+        const drivers = state.drivers || [];
+        const passengers = state.passengers || [];
+        const driverMap = new Map(drivers.map(driver => [normalizeId(driver.id), driver]));
+
+        const byNormalized = (entry) => entry?.normalized || '';
+
+        const resolvePassengersForChild = (childId, normalizedName) => {
+            return passengers.filter(passenger => {
+                if (childId && passenger.child_id) {
+                    return CarpoolManager.sameId(passenger.child_id, childId);
+                }
+                const passengerNormalized = normalizeName(passenger.child_name || passenger.name);
+                return passengerNormalized === normalizedName;
+            });
+        };
+
+        const buildRowForChild = (label, normalizedName, childId) => {
+            const relatedPassengers = resolvePassengersForChild(childId, normalizedName);
+            const directions = new Set();
+            let chosenPassenger = null;
+
+            const priorityOrder = ['round-trip', 'outbound', 'return'];
+
+            relatedPassengers.forEach(passenger => {
+                directions.add(formatPassengerDirectionLabel(passenger));
+                if (!chosenPassenger && passenger.driver_id) {
+                    chosenPassenger = passenger;
+                }
+            });
+
+            if (!chosenPassenger) {
+                chosenPassenger = priorityOrder
+                    .map(direction => relatedPassengers.find(passenger => getPassengerDirection(passenger) === direction))
+                    .find(Boolean) || null;
+            }
+
+            const driver = chosenPassenger?.driver_id ? driverMap.get(normalizeId(chosenPassenger.driver_id)) : null;
+            const directionLabel = directions.size
+                ? Array.from(directions).sort((a, b) => a.localeCompare(b)).join(' / ')
+                : 'Non attribué';
+
+            rows.push([
+                outingLabel,
+                label,
+                driver?.name || 'Non assigné',
+                formatPhoneForCsv(driver?.phone),
+                directionLabel,
+                chosenPassenger?.guardian_name || '',
+                formatPhoneForCsv(chosenPassenger?.guardian_phone),
+                chosenPassenger?.notes || ''
+            ]);
+        };
+
+        const processedKeys = new Set();
+
+        state.confirmedRoster
+            .slice()
+            .sort((a, b) => a.label.localeCompare(b.label))
+            .forEach(entry => {
+                const normalized = byNormalized(entry);
+                const key = entry.child_id ? `id:${entry.child_id}` : `name:${normalized}`;
+                if (key) processedKeys.add(key);
+                if (normalized) processedKeys.add(normalized);
+                buildRowForChild(entry.label, normalized, entry.child_id || null);
+            });
+
+        passengers.forEach(passenger => {
+            const normalized = normalizeName(passenger.child_name || passenger.name);
+            const key = passenger.child_id ? `id:${passenger.child_id}` : `name:${normalized}`;
+            if (processedKeys.has(key) || (normalized && processedKeys.has(normalized))) {
+                return;
+            }
+            processedKeys.add(key);
+            const label = titleCase(passenger.child_name || passenger.name || 'Enfant');
+            buildRowForChild(label, normalized, passenger.child_id || null);
+        });
+
+        rows.splice(1, rows.length - 1, ...rows.slice(1).sort((a, b) => a[1].localeCompare(b[1], 'fr', { sensitivity: 'base' })));
+
+        return rows;
+    }
+
+    function updateExportButtonState() {
+        if (!dom.exportButton) return;
+        const hasData = Boolean(state.selectedOutingId) &&
+            (
+                (state.drivers && state.drivers.length > 0) ||
+                (state.passengers && state.passengers.length > 0) ||
+                (state.confirmedRoster && state.confirmedRoster.length > 0)
+            );
+        dom.exportButton.disabled = !hasData;
+    }
+
+    function handleCarpoolExport() {
+        if (!state.selectedOutingId) {
+            notify('Sélectionnez une sortie avant d\'exporter.', 'warning');
+            return;
+        }
+        const rows = buildCarpoolCsvRows();
+        if (rows.length <= 1) {
+            notify('Aucune donnée à exporter pour cette sortie.', 'info');
+            return;
+        }
+        const outing = findSelectedOuting();
+        const slugSource = outing?.slug || outing?.id || outing?.title || state.selectedOutingId || 'covoiturage';
+        const slug = slugSource.toString().toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');
+        downloadCsv(`covoiturage_${slug}.csv`, rows);
+        notify('Export CSV généré.', 'success');
     }
 
 function renderDrivers() {
@@ -1454,6 +1649,7 @@ function renderDrivers() {
         if (dom.refreshButton) dom.refreshButton.addEventListener('click', () => loadOutings(true));
         if (dom.driverForm) dom.driverForm.addEventListener('submit', handleDriverForm);
         if (dom.passengerForm) dom.passengerForm.addEventListener('submit', handlePassengerForm);
+        if (dom.exportButton) dom.exportButton.addEventListener('click', handleCarpoolExport);
     }
 
     ready(() => {
@@ -1470,6 +1666,7 @@ function renderDrivers() {
         dom.passengerForm = document.getElementById('carpoolPassengerForm');
         dom.passengerChildSelect = dom.passengerForm ? dom.passengerForm.querySelector('select[name="childName"]') : null;
         dom.passengerDriverSelect = dom.passengerForm ? dom.passengerForm.querySelector('select[name="driverId"]') : null;
+        dom.exportButton = document.getElementById('carpoolExportButton');
 
         if (!dom.outingSelect) {
             console.error(LOG_PREFIX, 'Initialisation interrompue: aucun select de sortie trouvé.');
@@ -1494,6 +1691,7 @@ function renderDrivers() {
         }
         attachEvents();
         loadOutings();
+        updateExportButtonState();
     });
     // === Capacity editor for drivers (kid seats) ===
     function initCapacityEditorsForContainer(container, direction) {

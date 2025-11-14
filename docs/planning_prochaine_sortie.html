@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planning de la Prochaine Sortie · Section Marine de Poudlard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/main.css">
+    <style>
+        body {
+            background: linear-gradient(145deg, #e3f2fd, #f1f8f4);
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+
+        body[data-age-verified="false"] .planning-nav,
+        body[data-age-verified="false"] .planning-container {
+            filter: blur(12px);
+            pointer-events: none;
+            user-select: none;
+        }
+
+        #age-gate-overlay {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(15, 23, 42, 0.75);
+            padding: 1.5rem;
+            z-index: 9999;
+        }
+
+        #age-gate-overlay[hidden] {
+            display: none;
+        }
+
+        .age-gate-card {
+            max-width: 420px;
+            width: 100%;
+            background: #ffffff;
+            border: 3px solid var(--c-ink-900);
+            border-radius: var(--r-lg);
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25);
+            font-family: 'Nunito', sans-serif;
+        }
+
+        .age-gate-card h2 {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.8rem;
+            margin: 0 0 0.75rem 0;
+            color: var(--c-forest-700);
+        }
+
+        .age-gate-card p {
+            font-size: 1.05rem;
+            color: #374151;
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .age-gate-form {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            text-align: left;
+        }
+
+        .age-gate-label {
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--c-forest-700);
+        }
+
+        .age-gate-input-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .age-gate-input {
+            flex: 1;
+            border: 2px solid var(--c-ink-900);
+            border-radius: var(--r-sm);
+            padding: 0.65rem 0.75rem;
+            font-size: 1.05rem;
+            font-family: 'Nunito', sans-serif;
+            text-align: center;
+            letter-spacing: 0.1rem;
+        }
+
+        .age-gate-submit {
+            background: #1e88e5;
+            color: #fff;
+            border: 2px solid var(--c-ink-900);
+            border-radius: var(--r-sm);
+            padding: 0.65rem 1.2rem;
+            font-size: 1rem;
+            font-family: 'Patrick Hand', cursive;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .age-gate-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 18px rgba(30, 136, 229, 0.35);
+        }
+
+        .age-gate-error {
+            min-height: 1.25rem;
+            font-size: 0.9rem;
+            color: #c62828;
+            font-weight: 600;
+        }
+
+        .age-gate-hint {
+            font-size: 0.9rem;
+            color: #546e7a;
+        }
+
+        .planning-nav {
+            max-width: 1100px;
+            margin: 0 auto 2rem auto;
+            background: rgba(255, 255, 255, 0.95);
+            border: 2px solid var(--c-ink-900);
+            border-radius: var(--r-md);
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .planning-nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.4rem;
+            color: var(--c-forest-700);
+        }
+
+        .planning-nav-links {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .planning-nav-links a {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            background: #4CAF50;
+            color: white;
+            border: 2px solid var(--c-ink-900);
+            border-radius: var(--r-sm);
+            padding: 0.4rem 0.9rem;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1rem;
+            text-decoration: none;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+
+        .planning-nav-links a:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+            background: #43A047;
+        }
+
+        .planning-container {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .planning-header {
+            background: linear-gradient(135deg, #1e88e5, #64b5f6);
+            color: white;
+            border: 3px solid var(--c-ink-900);
+            border-radius: var(--r-lg);
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        }
+
+        .planning-header h1 {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 2.5rem;
+            margin: 0 0 0.5rem 0;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .planning-header p {
+            font-family: 'Nunito', sans-serif;
+            font-size: 1.2rem;
+            margin: 0;
+            opacity: 0.95;
+        }
+
+        .section-card {
+            background: white;
+            border: 3px solid var(--c-ink-900);
+            border-radius: var(--r-lg);
+            padding: 2rem;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .section-card h2 {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 2rem;
+            color: var(--c-forest-700);
+            margin: 0 0 1rem 0;
+            padding-bottom: 0.75rem;
+            border-bottom: 3px solid var(--c-forest-400);
+        }
+
+        .section-card h3 {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.5rem;
+            color: var(--c-orange-600);
+            margin: 1.5rem 0 0.75rem 0;
+        }
+
+        .context-text {
+            font-family: 'Nunito', sans-serif;
+            font-size: 1.05rem;
+            line-height: 1.8;
+            color: #424242;
+            margin-bottom: 1rem;
+        }
+
+        .context-quote {
+            background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+            border-left: 4px solid #ff9800;
+            padding: 1rem 1.5rem;
+            margin: 1rem 0;
+            font-style: italic;
+            border-radius: var(--r-sm);
+        }
+
+        .schedule-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .schedule-table th,
+        .schedule-table td {
+            border: 2px solid var(--c-ink-900);
+            padding: 0.75rem;
+            text-align: left;
+            font-family: 'Nunito', sans-serif;
+        }
+
+        .schedule-table th {
+            background: linear-gradient(135deg, #4CAF50, #66BB6A);
+            color: white;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.2rem;
+        }
+
+        .schedule-table tbody tr:nth-child(odd) {
+            background: #f5f9ff;
+        }
+
+        .schedule-table tbody tr:hover {
+            background: #e3f2fd;
+        }
+
+        .time-cell {
+            font-weight: bold;
+            color: var(--c-forest-700);
+            white-space: nowrap;
+        }
+
+        .houses-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .house-card {
+            background: white;
+            border: 3px solid var(--c-ink-900);
+            border-radius: var(--r-md);
+            padding: 1.5rem;
+            text-align: center;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .house-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+        }
+
+        .house-card.gryffondor {
+            background: linear-gradient(135deg, #ffebee, #ffcdd2);
+            border-color: #c62828;
+        }
+
+        .house-card.poufsouffle {
+            background: linear-gradient(135deg, #fff9c4, #fff59d);
+            border-color: #f57f17;
+        }
+
+        .house-card.serdaigle {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            border-color: #1565c0;
+        }
+
+        .house-card.serpentard {
+            background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+            border-color: #2e7d32;
+        }
+
+        .house-card h4 {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.5rem;
+            margin: 0 0 0.5rem 0;
+        }
+
+        .professors-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .professor-card {
+            background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+            border: 2px solid #7b1fa2;
+            border-radius: var(--r-md);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .professor-name {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #4a148c;
+        }
+
+        .professor-role {
+            font-family: 'Nunito', sans-serif;
+            font-size: 0.95rem;
+            color: #6a1b9a;
+        }
+
+        .accomplishments-list {
+            list-style: none;
+            padding: 0;
+            margin: 1rem 0;
+        }
+
+        .accomplishments-list li {
+            background: linear-gradient(90deg, #e8f5e9, #f1f8e9);
+            border-left: 4px solid #4CAF50;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.75rem;
+            border-radius: var(--r-sm);
+            font-family: 'Nunito', sans-serif;
+            font-size: 1.05rem;
+        }
+
+        .accomplishments-list li:before {
+            content: '✓ ';
+            color: #4CAF50;
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-right: 0.5rem;
+        }
+
+        .mission-highlight {
+            background: linear-gradient(135deg, #ffebee, #ffcdd2);
+            border: 3px solid #d32f2f;
+            border-radius: var(--r-lg);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            text-align: center;
+        }
+
+        .mission-highlight h3 {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.8rem;
+            color: #c62828;
+            margin: 0 0 0.75rem 0;
+        }
+
+        .mission-highlight p {
+            font-family: 'Nunito', sans-serif;
+            font-size: 1.1rem;
+            color: #424242;
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        .info-box {
+            background: linear-gradient(135deg, #e0f2f1, #b2dfdb);
+            border-left: 4px solid #00897b;
+            padding: 1rem 1.5rem;
+            margin: 1rem 0;
+            border-radius: var(--r-sm);
+        }
+
+        .info-box strong {
+            color: #00695c;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.1rem;
+        }
+
+        .document-card {
+            background: linear-gradient(135deg, #fffde7, #fff8e1);
+            border: 3px solid #fbc02d;
+            border-radius: var(--r-lg);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .document-card h3 {
+            margin: 0;
+            font-family: 'Patrick Hand', cursive;
+            color: #f57f17;
+        }
+
+        .document-card p {
+            margin: 0;
+            font-family: 'Nunito', sans-serif;
+            color: #5d4037;
+            line-height: 1.6;
+        }
+
+        .document-card-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .document-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.65rem 1rem;
+            border: 2px solid var(--c-ink-900);
+            border-radius: var(--r-sm);
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1rem;
+            text-decoration: none;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .document-link.primary {
+            background: #ffb300;
+            color: #3e2723;
+        }
+
+        .document-link.secondary {
+            background: white;
+            color: #f57f17;
+        }
+
+        .document-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+        }
+
+        .document-preview {
+            border: 2px dashed #f9a825;
+            border-radius: var(--r-md);
+            background: white;
+            overflow: hidden;
+        }
+
+        .document-preview iframe {
+            width: 100%;
+            min-height: 420px;
+            border: none;
+            background: white;
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 1.5rem 0.75rem;
+            }
+
+            .planning-header h1 {
+                font-size: 1.8rem;
+            }
+
+            .section-card {
+                padding: 1.25rem;
+            }
+
+            .section-card h2 {
+                font-size: 1.5rem;
+            }
+
+            .schedule-table {
+                font-size: 0.9rem;
+            }
+
+            .houses-grid,
+            .professors-list {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body data-age-verified="false">
+    <div id="age-gate-overlay" role="dialog" aria-live="assertive">
+        <div class="age-gate-card">
+            <h2>🔒 Accès réservé</h2>
+            <p data-age-message>
+                Merci d'indiquer votre année de naissance pour accéder au planning.
+            </p>
+            <form id="age-gate-form" class="age-gate-form" novalidate>
+                <label class="age-gate-label" for="age-gate-input">Année de naissance</label>
+                <div class="age-gate-input-group">
+                    <input type="number" inputmode="numeric" id="age-gate-input" class="age-gate-input" min="1900" max="2099" aria-describedby="age-gate-error" required>
+                    <button type="submit" class="age-gate-submit">Entrer</button>
+                </div>
+                <div id="age-gate-error" class="age-gate-error" data-age-error role="alert" aria-live="polite"></div>
+                <div class="age-gate-hint">L'année doit être saisie avec 4 chiffres.</div>
+            </form>
+        </div>
+    </div>
+    <!-- Navigation -->
+    <nav class="planning-nav">
+        <div class="planning-nav-brand">
+            <span>🌊</span>
+            <span>Planning de Sortie</span>
+        </div>
+        <div class="planning-nav-links">
+            <a href="index.html">🏠 Accueil</a>
+            <a href="calendrier.html">📅 Calendrier</a>
+            <a href="liste.html">📋 Ma Liste</a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="planning-container">
+        <!-- Header -->
+        <div class="planning-header">
+            <h1>🌊 Week-end Scout 🌊</h1>
+            <p>La Section Marine de Poudlard : Le Premier Courant de l'Eau</p>
+        </div>
+
+        <!-- Context Section -->
+        <div class="section-card">
+            <h2>🌊 Le Contexte - La Magie ancienne de l'Eau</h2>
+
+            <p class="context-text">
+                Depuis plusieurs mois, Poudlard change. Les flammes brûlent plus fort dans la Grande Salle,
+                la chaleur colle aux murs, et les fontaines des serres se tarissent sans raison.
+                Certains disent que le château lui-même respire plus vite, comme s'il avait peur.
+            </p>
+
+            <p class="context-text">
+                Les professeurs ont découvert la cause : <strong>le Feu Primordial</strong> s'est réveillé.
+                Une magie ancienne, née avant les baguettes, avant même les maisons, une flamme vivante
+                qui se nourrit des émotions humaines — colère, orgueil, peur. Plus on s'y oppose, plus elle s'enflamme.
+            </p>
+
+            <div class="context-quote">
+                "Quand le feu reviendra, cherchez l'eau dans le silence du lac."
+            </div>
+
+            <p class="context-text">
+                La professeure Lyra Callidra a découvert qu'une partie du château avait été perdue :
+                une aile sous-marine, engloutie dans les temps anciens, connue autrefois sous le nom de
+                <strong>Section Marine de Poudlard</strong>. C'est là qu'on enseignait la <strong>Magie ancienne de l'Eau</strong>,
+                une magie qui ne se commande pas par des mots, mais par la paix intérieure, la prière,
+                et le lien avec la nature.
+            </p>
+
+            <div class="mission-highlight">
+                <h3>🎯 La Mission</h3>
+                <p>
+                    Les Louveteaux ont été appelés à Poudlard comme héritiers de la Section Marine.
+                    Leur mission : <strong>réveiller le Premier Courant de l'Eau</strong>,
+                    la première des quatre forces capables d'endormir le Feu Primordial avant qu'il n'engloutisse le château.
+                </p>
+            </div>
+
+            <h3>Pour réussir, ils devront :</h3>
+            <ul class="accomplishments-list" style="list-style: none;">
+                <li style="border-left-color: #2196F3;">Apprendre les gestes anciens (nœuds, campement, constructions)</li>
+                <li style="border-left-color: #FF9800;">Découvrir la prière et la Lumière véritable</li>
+                <li style="border-left-color: #4CAF50;">Unir les quatre maisons de Poudlard, car l'eau ne coule que là où les cœurs se rassemblent</li>
+            </ul>
+        </div>
+
+        <!-- Schedule Section -->
+        <div class="section-card">
+            <h2>📅 Planning Complet du Week-end</h2>
+
+            <div class="info-box">
+                <strong>ℹ️ Note pour les parents :</strong> Le week-end se déroule entre imaginaire et temps scout.
+                Chaque moment aide les enfants à avancer dans leur mission et à grandir dans la foi.
+            </div>
+
+            <h3>🌅 Samedi</h3>
+            <table class="schedule-table">
+                <thead>
+                    <tr>
+                        <th>Heure</th>
+                        <th>Activité</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="time-cell">13h30</td>
+                        <td><strong>Départ</strong> - Place de la Loi</td>
+                        <td>Les enfants reçoivent leur lettre d'admission à Poudlard et sont choisis pour rejoindre la Section Marine</td>
+                    </tr>
+                    <tr>
+                        <td class="time-cell">14h30</td>
+                        <td><strong>Arrivée</strong> - Cérémonie d'accueil</td>
+                        <td>Cérémonie de mise en maison, présentation des professeurs et de la mission</td>
+                    </tr>
+                    <tr>
+                        <td class="time-cell">15h00-16h00</td>
+                        <td><strong>Installation du campement</strong></td>
+                        <td>Cours de Botanique Magique : montage des tentes et création du campement (abris pluie)</td>
+                    </tr>
+                    <tr>
+                        <td class="time-cell">16h00-17h00</td>
+                        <td><strong>Temps pédagogique</strong></td>
+                        <td>Un professeur parle de la lumière de Dieu, transition vers le temps scout (serment et Lumière de Bethléem)</td>
+                    </tr>
+                    <tr>
+                        <td class="time-cell">17h00-18h30</td>
+                        <td><strong>Ateliers de la Section Marine</strong></td>
+                        <td>Retour à l'imaginaire : nœuds, coin nature, permis couteau, création d'insignes</td>
+                    </tr>
+                    <tr>
+                        <td class="time-cell">18h30-19h30</td>
+                        <td><strong>Préparation du dîner</strong> / temps libre</td>
+                        <td>Vie de camp et entraide</td>
+                    </tr>
+                    <tr>
+                        <td class="time-cell">19h30-20h15</td>
+                        <td><strong>Dîner</strong></td>
+                        <td>Banquet de la Section Marine, chaque maison porte un toast à sa valeur</td>
+                    </tr>
+                    <tr>
+                        <td class="time-cell">20h15-21h15</td>
+                        <td><strong>Veillée</strong></td>
+                        <td>Aventure collective, union des maisons, première flamme bleue</td>
+                    </tr>
+                    <tr>
+                        <td class="time-cell">21h30</td>
+                        <td><strong>Extinction des feux</strong></td>
+                        <td>Silence, feu bleu, ronde des chefs</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>🌄 Dimanche</h3>
+            <table class="schedule-table">
+                <thead>
+                    <tr>
+                        <th>Heure</th>
+                        <th>Activité</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="time-cell">07h30</td>
+                        <td><strong>Réveil chef</strong></td>
+                        <td>Petit mot des professeurs : Le Feu Primordial est calme... pour l'instant</td>
+                    </tr>
+                    <tr>
+                        <td class="time-cell">08h30</td>
+                        <td><strong>Petit déjeuner</strong> et rangement</td>
+                        <td>Préparation de la journée</td>
+                    </tr>
+                    <tr>
+                        <td class="time-cell">09h30</td>
+                        <td><strong>Temps forum</strong></td>
+                        <td>Échanges et discussions en équipe</td>
+                    </tr>
+                    <tr>
+                        <td class="time-cell">10h00</td>
+                        <td><strong>Temps spirituel</strong></td>
+                        <td>Prière et remerciement : la Source de toute lumière</td>
+                    </tr>
+                    <tr>
+                        <td class="time-cell">10h30-11h15</td>
+                        <td><strong>Temps atout</strong></td>
+                        <td>Réflexion sur ses dons et sa progression personnelle</td>
+                    </tr>
+                    <tr>
+                        <td class="time-cell">11h15-12h00</td>
+                        <td><strong>Rangement</strong></td>
+                        <td>Le Repos de la Terre et de l'Eau : ranger et respecter le lieu</td>
+                    </tr>
+                    <tr>
+                        <td class="time-cell">12h00-12h45</td>
+                        <td><strong>Déjeuner</strong></td>
+                        <td>Moment simple et joyeux</td>
+                    </tr>
+                    <tr>
+                        <td class="time-cell">12h45-13h15</td>
+                        <td><strong>Vaisselle</strong> / transition</td>
+                        <td>Les professeurs annoncent le dernier réveil du Feu Primordial</td>
+                    </tr>
+                    <tr>
+                        <td class="time-cell">13h15-15h00</td>
+                        <td><strong>Grand jeu final</strong></td>
+                        <td>Épreuve d'unité entre maisons, consolidation du Premier Courant de l'Eau</td>
+                    </tr>
+                    <tr>
+                        <td class="time-cell">15h00-15h30</td>
+                        <td><strong>Cérémonie de clôture</strong></td>
+                        <td>Le feu devient bleu clair, remise d'insignes et de galets bleus</td>
+                    </tr>
+                    <tr>
+                        <td class="time-cell">15h30</td>
+                        <td><strong>Goûter et arrivée des parents</strong></td>
+                        <td>Clôture joyeuse et partages</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Programme du Temps -->
+        <div class="section-card" id="programme-du-temps">
+            <h2>🕊️ Programme du Temps Spi</h2>
+            <p class="context-text">
+                Vous souhaitez partager le déroulé détaillé des temps spi avec les autres chefs ou le relire
+                tranquillement&nbsp;? Le document complet est disponible ci-dessous.
+            </p>
+            <div class="document-card" aria-labelledby="programme-du-temps-titre">
+                <h3 id="programme-du-temps-titre">Programme détaillé</h3>
+                <p>
+                    Ce PDF rassemble les prières, chants et relais proposés pour accompagner les enfants tout au long
+                    du week-end. Vous pouvez l’ouvrir en ligne ou le télécharger pour l’imprimer.
+                </p>
+                <div class="document-card-actions">
+                    <a class="document-link primary" href="tempsspiv1.pdf" target="_blank" rel="noopener">
+                        📄 Ouvrir le PDF
+                    </a>
+                    <a class="document-link secondary" href="tempsspiv1.pdf" download>
+                        ⬇️ Télécharger
+                    </a>
+                </div>
+                <div class="document-preview" aria-label="Aperçu du programme du temps">
+                    <iframe src="tempsspiv1.pdf#view=FitH" title="Programme du Temps" loading="lazy"></iframe>
+                </div>
+            </div>
+        </div>
+
+        <!-- Houses Section -->
+        <div class="section-card">
+            <h2>🏰 Les Quatre Maisons</h2>
+            <p class="context-text">Les enfants seront répartis en quatre équipes, chacune représentant une maison de Poudlard avec ses valeurs spécifiques :</p>
+
+            <div class="houses-grid">
+                <div class="house-card gryffondor">
+                    <h4>🦁 Gryffondor</h4>
+                    <p><strong>Valeur :</strong> Courage</p>
+                    <p>Oser, défendre la justice</p>
+                </div>
+                <div class="house-card poufsouffle">
+                    <h4>🦡 Poufsouffle</h4>
+                    <p><strong>Valeur :</strong> Bonté</p>
+                    <p>Servir, soutenir les autres</p>
+                </div>
+                <div class="house-card serdaigle">
+                    <h4>🦅 Serdaigle</h4>
+                    <p><strong>Valeur :</strong> Sagesse</p>
+                    <p>Observer, écouter, comprendre</p>
+                </div>
+                <div class="house-card serpentard">
+                    <h4>🐍 Serpentard</h4>
+                    <p><strong>Valeur :</strong> Ruse & maîtrise</p>
+                    <p>Réfléchir, anticiper, se contrôler</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Professors Section -->
+        <div class="section-card">
+            <h2>👨‍🏫 Les Professeurs de la Section Marine</h2>
+            <p class="context-text">Les chefs scouts incarneront des professeurs qui guideront les enfants tout au long du week-end :</p>
+
+            <div class="professors-list">
+                <div class="professor-card">
+                    <div class="professor-name">Lyra Callidra</div>
+                    <div class="professor-role">Directrice de la Section Marine</div>
+                    <div class="professor-role">Guide, calme, esprit de service</div>
+                </div>
+                <div class="professor-card">
+                    <div class="professor-name">Eglantine Chourave II</div>
+                    <div class="professor-role">Gardienne de la Botanique et de la prière naturelle</div>
+                    <div class="professor-role">Respect du lieu, coin spirituel</div>
+                </div>
+                <div class="professor-card">
+                    <div class="professor-name">Thaddeus Luneclair</div>
+                    <div class="professor-role">Maître des gestes marins (campisme, nœuds)</div>
+                    <div class="professor-role">Apprentissage par l'action</div>
+                </div>
+                <div class="professor-card">
+                    <div class="professor-name">Rubeus Navar</div>
+                    <div class="professor-role">Défense fluide (sécurité, couteau)</div>
+                    <div class="professor-role">Maîtrise, confiance, courage</div>
+                </div>
+                <div class="professor-card">
+                    <div class="professor-name">Corvin Morseveil</div>
+                    <div class="professor-role">Langage des sirènes et du morse</div>
+                    <div class="professor-role">Écoute et collaboration</div>
+                </div>
+                <div class="professor-card">
+                    <div class="professor-name">Artémis Vagueclaire</div>
+                    <div class="professor-role">Création magique (blasons, symboles)</div>
+                    <div class="professor-role">Expression, fierté, unité</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Accomplishments Section -->
+        <div class="section-card">
+            <h2>🎯 Ce que les enfants auront accompli</h2>
+            <p class="context-text">À la fin de ce week-end, votre enfant aura :</p>
+
+            <ul class="accomplishments-list">
+                <li>Intégré la Section Marine de Poudlard</li>
+                <li>Découvert la Lumière de Bethléem et fait leur serment de peuplade</li>
+                <li>Appris les gestes du campisme comme gestes de magie d'eau</li>
+                <li>Réveillé le Premier Courant de l'Eau</li>
+                <li>Apaisé le Feu Primordial (non vaincu)</li>
+            </ul>
+
+            <div class="info-box">
+                <strong>🎁 À la fin du week-end :</strong> Les enfants recevront des insignes et des galets bleus
+                symbolisant leur réussite et leur engagement dans la Section Marine de Poudlard.
+            </div>
+        </div>
+    </div>
+    <script>
+        (function () {
+            const MAX_ALLOWED_YEAR = 2006;
+            const STORAGE_KEY = 'planning-age-verified';
+            const body = document.body;
+            const overlay = document.getElementById('age-gate-overlay');
+            const form = document.getElementById('age-gate-form');
+            const input = document.getElementById('age-gate-input');
+            const errorEl = overlay?.querySelector('[data-age-error]');
+            const messageEl = overlay?.querySelector('[data-age-message]');
+
+            if (!overlay || !form || !input || !messageEl) {
+                return;
+            }
+
+            const setError = (message = '') => {
+                if (errorEl) {
+                    errorEl.textContent = message;
+                }
+            };
+
+            const focusInput = () => {
+                setTimeout(() => input.focus(), 50);
+            };
+
+            const unlockPage = () => {
+                body.dataset.ageVerified = 'true';
+                overlay.hidden = true;
+                setError('');
+                localStorage.setItem(STORAGE_KEY, 'true');
+            };
+
+            const denyAccess = (message) => {
+                body.dataset.ageVerified = 'false';
+                overlay.hidden = false;
+                setError(message || 'Accès refusé. Merci de vérifier votre saisie.');
+                input.value = '';
+                focusInput();
+            };
+
+            const handleSubmit = (event) => {
+                event.preventDefault();
+                const raw = input.value.trim();
+
+                if (!/^\d{4}$/.test(raw)) {
+                    setError('Merci d’indiquer une année composée de 4 chiffres.');
+                    focusInput();
+                    return;
+                }
+
+                const year = parseInt(raw, 10);
+                if (!Number.isFinite(year) || year < 1900 || year > 2100) {
+                    setError('Cette année n’est pas valide.');
+                    focusInput();
+                    return;
+                }
+
+                if (year > MAX_ALLOWED_YEAR) {
+                    denyAccess('Cette page est réservée à un public adulte.');
+                    return;
+                }
+
+                unlockPage();
+            };
+
+            form.addEventListener('submit', handleSubmit);
+            input.addEventListener('input', () => setError(''));
+
+            if (localStorage.getItem(STORAGE_KEY) === 'true') {
+                unlockPage();
+            } else {
+                body.dataset.ageVerified = 'false';
+                overlay.hidden = false;
+                setError('');
+                focusInput();
+            }
+        })();
+    </script>
+</body>
+</html>

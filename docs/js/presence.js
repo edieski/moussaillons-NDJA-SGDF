@@ -84,6 +84,39 @@
         }
     }
 
+    function escapeCsv(value) {
+        const stringValue = value == null ? '' : String(value);
+        return `"${stringValue.replace(/"/g, '""')}"`;
+    }
+
+    function downloadCsv(filename, rows) {
+        if (!Array.isArray(rows) || !rows.length) {
+            return;
+        }
+        const csvBody = rows.map(row => row.map(escapeCsv).join(',')).join('\r\n');
+        const csvContent = `\uFEFF${csvBody}`;
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+
+    function findSelectedOuting() {
+        if (!state.selectedOutingId) {
+            return null;
+        }
+        const target = state.selectedOutingId.toString();
+        return state.outings.find(outing => {
+            const candidates = [outing.id, outing.slug];
+            return candidates.some(value => value != null && value.toString() === target);
+        }) || null;
+    }
+
     function getChildTeam(child) {
         if (!child) return '';
         return child.team || child.equipe || '';
@@ -203,6 +236,22 @@
         dom.statsCard.style.display = 'block';
     }
 
+    function updateExportButtonState() {
+        if (!dom.exportButton) return;
+        if (!state.selectedOutingId) {
+            dom.exportButton.disabled = true;
+            dom.exportButton.textContent = '⬇️ Exporter la présence (CSV)';
+            return;
+        }
+        const filteredCount = filterChildrenList(state.children).length;
+        dom.exportButton.disabled = filteredCount === 0;
+        if (filteredCount > 0) {
+            dom.exportButton.textContent = `⬇️ Exporter ${filteredCount} fiche${filteredCount > 1 ? 's' : ''} (CSV)`;
+        } else {
+            dom.exportButton.textContent = '⬇️ Exporter la présence (CSV)';
+        }
+    }
+
     function renderChildRow(child) {
         const record = findRecordForChild(child);
         const parentConfirmed = record?.parent_confirmed === true;
@@ -251,6 +300,7 @@
         if (!state.selectedOutingId) {
             dom.listContainer.innerHTML = '<div class="fey-note" style="text-align: center; padding: 1rem;">Sélectionnez une sortie pour afficher la liste des enfants.</div>';
             dom.emptyState.style.display = 'none';
+            updateExportButtonState();
             return;
         }
 
@@ -260,6 +310,7 @@
             dom.listContainer.innerHTML = '';
             dom.emptyState.style.display = 'block';
             dom.emptyState.textContent = 'Aucun enfant ne correspond au filtre actuel.';
+            updateExportButtonState();
             return;
         }
 
@@ -284,6 +335,7 @@
         });
 
         renderStats();
+        updateExportButtonState();
     }
 
     async function handleParentToggle(card, confirmed) {
@@ -453,6 +505,43 @@
         notify('Mot de passe chef enregistré pour cette session.', 'success');
     }
 
+    function handleExportClick() {
+        if (!state.selectedOutingId) {
+            notify('Sélectionnez une sortie avant d\'exporter.', 'warning');
+            return;
+        }
+        const filtered = filterChildrenList(state.children);
+        if (!filtered.length) {
+            notify('Aucune fiche à exporter pour ce filtre.', 'info');
+            return;
+        }
+        const outing = findSelectedOuting();
+        const outingLabel = outing?.title || outing?.name || 'Sortie';
+        const rows = [
+            ['Sortie', 'Nom', 'Équipe', 'Parents confirmés', 'Date confirmation parent', 'Chefs validés', 'Date validation chef']
+        ];
+
+        filtered.forEach(child => {
+            const record = findRecordForChild(child);
+            const parentConfirmed = record?.parent_confirmed === true;
+            const leaderValidated = record?.leader_validated === true;
+            rows.push([
+                outingLabel,
+                computeChildDisplayName(child) || 'Enfant',
+                getChildTeam(child) || '',
+                parentConfirmed ? 'Oui' : 'Non',
+                parentConfirmed ? formatDate(record?.parent_confirmed_at) : '',
+                leaderValidated ? 'Oui' : 'Non',
+                leaderValidated ? formatDate(record?.leader_validated_at) : ''
+            ]);
+        });
+
+        const slugSource = outing?.slug || outing?.id || outingLabel || 'sortie';
+        const slug = slugSource.toString().toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');
+        downloadCsv(`presence_${slug}.csv`, rows);
+        notify('Export CSV généré.', 'success');
+    }
+
     function applyMode() {
         state.isAdminMode = parseQueryMode();
         if (!dom.adminPanel) return;
@@ -476,6 +565,7 @@
         if (dom.searchInput) dom.searchInput.addEventListener('input', handleSearchInput);
         if (dom.teamFilter) dom.teamFilter.addEventListener('change', handleTeamFilter);
         if (dom.leaderSecretButton) dom.leaderSecretButton.addEventListener('click', handleLeaderSecretSave);
+        if (dom.exportButton) dom.exportButton.addEventListener('click', handleExportClick);
     }
 
     function injectStyles() {
@@ -575,10 +665,12 @@
         dom.adminPanel = document.getElementById('presenceAdminPanel');
         dom.leaderSecretInput = document.getElementById('leaderSecretInput');
         dom.leaderSecretButton = document.getElementById('leaderSecretToggle');
+        dom.exportButton = document.getElementById('presenceExportButton');
 
         applyMode();
         attachEvents();
         injectStyles();
+        updateExportButtonState();
 
         if (!window.RegistrationsService) {
             notify('Service des confirmations indisponible.', 'error');

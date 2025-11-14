@@ -27,6 +27,7 @@
             <button class="fey-tab" onclick="window.location.href='index.html#infos'">📱 Infos</button>
             <button class="fey-tab" onclick="window.location.href='index.html#equipes'">👥 Équipes</button>
             <button class="fey-tab" onclick="window.location.href='calendrier.html'">📅 Calendrier</button>
+            <button class="fey-tab" onclick="window.location.href='planning_prochaine_sortie.html'">🌊 Planning Sortie</button>
             <button class="fey-tab" onclick="window.location.href='carpool-link.html'">🚗 Covoiturage</button>
             <button class="fey-tab" onclick="window.location.href='presence.html'">📋 Présence</button>
             <button class="fey-tab" onclick="window.location.href='index.html#chansons'">🎵 Chansons</button>
@@ -43,6 +44,22 @@
                 <strong>📌 Astuce :</strong> Cliquez sur les liens "exemple 🔗" pour voir le matériel recommandé !<br>
                 <strong>⏰ Temps de préparation :</strong> Comptez 30-45 minutes pour tout vérifier.<br>
                 <strong>💾 Sauvegarde :</strong> Votre liste se sauvegarde automatiquement !
+            </div>
+        </div>
+
+        <div class="fey-card" style="background: linear-gradient(135deg, #E1F5FE, #B3E5FC); border-left: 6px solid #03A9F4; margin-bottom: 2rem;">
+            <div class="fey-card-header">🌧️ Info Météo : Camping sous la pluie</div>
+            <div class="fey-note" style="background: transparent; border: none; margin: 0;">
+                <strong>☔ Prévisions :</strong> De la pluie est prévue ce week-end. Quelques équipements supplémentaires à ne pas oublier !<br>
+                <strong>🎯 L'essentiel pour rester au sec :</strong>
+                <ul style="margin: 0.5rem 0 0 1.5rem; padding: 0;">
+                    <li>Housse anti-pluie pour le sac à dos (pour le trajet)</li>
+                    <li>Cape de pluie ou poncho</li>
+                    <li>Change supplémentaire + chaussettes en extra</li>
+                    <li>Sacs plastiques pour protéger les vêtements secs dans le sac</li>
+                </ul>
+                <strong>💡 Astuce :</strong> Ranger les vêtements secs dans des sacs étanches. Une fois sous la tente, tout restera bien au sec !<br>
+                <strong>🏕️ Bonus :</strong> Chocolat chaud et chauffe-mains pour le confort après les activités !
             </div>
                 </div>
 
@@ -137,7 +154,22 @@
                             <div class="fey-item">
                                 <input type="checkbox" id="item5">
                                 <label for="item5">Oreiller (optionnel)</label>
-            </div>
+                            </div>
+                            <div class="fey-item">
+                                <input type="checkbox" id="item5b">
+                                <label for="item5b">
+                                    Housse anti-pluie pour sac à dos
+                                    <a href="https://www.decathlon.fr/p/housse-protection-pluie-sac-a-dos-40-60l/_/R-p-1903" target="_blank" class="fey-link">exemple 🔗</a>
+                                    <span class="fey-tooltip">☔ Essentiel ! Protège tout le contenu du sac pendant la marche sous la pluie.</span>
+                                </label>
+                            </div>
+                            <div class="fey-item">
+                                <input type="checkbox" id="item5c">
+                                <label for="item5c">
+                                    Sac poubelle grande taille (doublure sac)
+                                    <span class="fey-tooltip">🛡️ Double protection ! Mettre à l'intérieur du sac à dos pour isoler complètement les affaires de l'humidité.</span>
+                                </label>
+                            </div>
         </div>
     </div>
 
@@ -214,6 +246,36 @@
                                 <input type="checkbox" id="item16">
                                 <label for="item16">Gants imperméables</label>
                             </div>
+                            <div class="fey-item">
+                                <input type="checkbox" id="item17">
+                                <label for="item17">
+                                    Bonnet/Chapeau imperméable
+                                    <a href="https://www.decathlon.fr/p/bob-de-randonnee-impermeable-enfant-nh500/_/R-p-301442" target="_blank" class="fey-link">exemple 🔗</a>
+                                    <span class="fey-tooltip">🧢 Garde la tête au sec et au chaud sous la pluie !</span>
+                                </label>
+                            </div>
+                            <div class="fey-item">
+                                <input type="checkbox" id="item18">
+                                <label for="item18">
+                                    Cape de pluie / Poncho
+                                    <a href="https://www.decathlon.fr/p/poncho-de-pluie-de-randonnee-arpenaz-10l/_/R-p-1882" target="_blank" class="fey-link">exemple 🔗</a>
+                                    <span class="fey-tooltip">🌧️ Protection supplémentaire qui couvre le sac à dos aussi !</span>
+                                </label>
+                            </div>
+                            <div class="fey-item">
+                                <input type="checkbox" id="item18b">
+                                <label for="item18b">
+                                    Change complet supplémentaire
+                                    <span class="fey-tooltip">👕 En cas de pluie forte : T-shirt, sous-pull, pantalon de rechange. Toujours avoir des vêtements secs !</span>
+                                </label>
+                            </div>
+                            <div class="fey-item">
+                                <input type="checkbox" id="item18c">
+                                <label for="item18c">
+                                    Chaussettes supplémentaires (2 paires)
+                                    <span class="fey-tooltip">🧦 En plus des 3-4 paires déjà prévues ! Avec la pluie, mieux vaut trop que pas assez.</span>
+                                </label>
+                            </div>
                         </div>
                     </div>
 
@@ -232,6 +294,22 @@
                             <div class="fey-item">
                                 <input type="checkbox" id="item20">
                                 <label for="item20">Chaussures sèches (soir)</label>
+                            </div>
+                            <div class="fey-item">
+                                <input type="checkbox" id="item20b">
+                                <label for="item20b">
+                                    Bottes de pluie / Guêtres imperméables
+                                    <a href="https://www.decathlon.fr/p/guetres-impermeables-de-randonnee-nh500/_/R-p-301540" target="_blank" class="fey-link">exemple guêtres 🔗</a>
+                                    <span class="fey-tooltip">🥾 Les guêtres protègent les jambes et empêchent l'eau de rentrer dans les chaussures par le haut !</span>
+                                </label>
+                            </div>
+                            <div class="fey-item">
+                                <input type="checkbox" id="item20c">
+                                <label for="item20c">
+                                    Chaussettes imperméables
+                                    <a href="https://www.decathlon.fr/p/sur-chaussettes-impermeable/_/R-p-183846" target="_blank" class="fey-link">exemple 🔗</a>
+                                    <span class="fey-tooltip">💧 Protection supplémentaire ! Se portent par-dessus les chaussettes normales.</span>
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -253,6 +331,13 @@
                             <div class="fey-item">
                                 <input type="checkbox" id="item23">
                                 <label for="item23">Mouchoirs</label>
+                            </div>
+                            <div class="fey-item">
+                                <input type="checkbox" id="item23b">
+                                <label for="item23b">
+                                    Serviette supplémentaire (petite)
+                                    <span class="fey-tooltip">🧺 Pour se sécher après la pluie ou si la première est mouillée !</span>
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -341,6 +426,60 @@
                             <div class="fey-item">
                                 <input type="checkbox" id="item36">
                                 <label for="item36">Vêtements cocoon (soir)</label>
+                            </div>
+                            <div class="fey-item">
+                                <input type="checkbox" id="item37">
+                                <label for="item37">
+                                    Sacs plastiques zip (plusieurs)
+                                    <a href="https://www.ikea.com/fr/fr/p/istad-sachet-congelation-bleu-vert-80339295/" target="_blank" class="fey-link">exemple 🔗</a>
+                                    <span class="fey-tooltip">💼 Pour organiser et protéger vêtements secs, téléphone, papiers, etc. Super utile sous la pluie !</span>
+                                </label>
+                            </div>
+                            <div class="fey-item">
+                                <input type="checkbox" id="item38">
+                                <label for="item38">
+                                    Sacs poubelle supplémentaires (x5)
+                                    <span class="fey-tooltip">🗑️ Pour doublement protéger l'intérieur du sac à dos et isoler les affaires mouillées !</span>
+                                </label>
+                            </div>
+                            <div class="fey-item">
+                                <input type="checkbox" id="item39">
+                                <label for="item39">
+                                    Cordelette (3-5 mètres)
+                                    <a href="https://www.decathlon.fr/p/corde-auxiliaire-4-mm-x-4-m/_/R-p-1923" target="_blank" class="fey-link">exemple 🔗</a>
+                                    <span class="fey-tooltip">🪢 Pour étendre et sécher les vêtements mouillés dans/autour de la tente !</span>
+                                </label>
+                            </div>
+                            <div class="fey-item">
+                                <input type="checkbox" id="item40">
+                                <label for="item40">
+                                    Pinces à linge (6-8)
+                                    <span class="fey-tooltip">📎 Indispensable pour accrocher les vêtements mouillés sur la cordelette !</span>
+                                </label>
+                            </div>
+                            <div class="fey-item">
+                                <input type="checkbox" id="item41">
+                                <label for="item41">
+                                    Chauffe-mains réutilisables
+                                    <a href="https://www.decathlon.fr/p/chaufferettes-mains-reutilisables/_/R-p-305847" target="_blank" class="fey-link">exemple 🔗</a>
+                                    <span class="fey-tooltip">🔥 Pour réchauffer les mains glacées après la pluie. Se réactive en les bouillant !</span>
+                                </label>
+                            </div>
+                            <div class="fey-item">
+                                <input type="checkbox" id="item42">
+                                <label for="item42">
+                                    Couverture de survie
+                                    <a href="https://www.decathlon.fr/p/couverture-de-survie/_/R-p-1897" target="_blank" class="fey-link">exemple 🔗</a>
+                                    <span class="fey-tooltip">🆘 En cas d'urgence ou pour isoler du froid et de l'humidité. Prend peu de place !</span>
+                                </label>
+                            </div>
+                            <div class="fey-item">
+                                <input type="checkbox" id="item43">
+                                <label for="item43">
+                                    Bouillotte / Chaufferette corporelle
+                                    <a href="https://www.decathlon.fr/p/bouillotte-camping/_/R-p-335169" target="_blank" class="fey-link">exemple 🔗</a>
+                                    <span class="fey-tooltip">🌡️ Pour réchauffer le sac de couchage avant de dormir après une journée humide !</span>
+                                </label>
                             </div>
                         </div>
                     </div>
