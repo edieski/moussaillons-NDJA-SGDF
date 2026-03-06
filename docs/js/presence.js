@@ -211,19 +211,21 @@
         }
 
         const stats = computeStats();
+        const hasFilter = stats.filteredCount < stats.total;
         const items = [
-            { label: 'Enfants listés', value: stats.filteredCount, color: '#4CAF50' },
-            { label: 'Parents confirmés (filtre)', value: stats.filteredParentConfirmed, color: '#2196F3' }
+            { label: 'Enfants affichés', value: stats.filteredCount, color: '#4CAF50' },
+            { label: 'Confirmés par les parents', value: stats.filteredParentConfirmed, color: '#2196F3' }
         ];
 
         if (state.isAdminMode) {
-            items.push({ label: 'Chefs validés (filtre)', value: stats.filteredLeaderValidated, color: '#F57C00' });
+            items.push({ label: 'Validés par les chefs', value: stats.filteredLeaderValidated, color: '#F57C00' });
         }
 
-        items.push({ label: 'Total confirmés (parents)', value: stats.parentConfirmed, color: '#009688' });
-
-        if (state.isAdminMode) {
-            items.push({ label: 'Total validés (chefs)', value: stats.leaderValidated, color: '#6A1B9A' });
+        if (hasFilter) {
+            items.push({ label: 'Parents OK (toute la sortie)', value: stats.parentConfirmed, color: '#009688' });
+            if (state.isAdminMode) {
+                items.push({ label: 'Chefs OK (toute la sortie)', value: stats.leaderValidated, color: '#6A1B9A' });
+            }
         }
 
         dom.statsContent.innerHTML = items.map(item => `
@@ -438,8 +440,28 @@
         }
         try {
             const outings = await window.OutingsService.list();
-            state.outings = outings;
+
+            // Trier les sorties par date de début (comme dans le calendrier et le covoiturage)
+            state.outings = [...outings].sort((a, b) => {
+                const at = a.startDate ? a.startDate.getTime() : 0;
+                const bt = b.startDate ? b.startDate.getTime() : 0;
+                return at - bt;
+            });
+
+            // Si aucune sortie n'est encore sélectionnée, pré‑sélectionner la prochaine à venir
+            if (!state.selectedOutingId && state.outings.length) {
+                const now = Date.now();
+                const upcoming = state.outings.find(outing => outing.startDate && outing.startDate.getTime() >= now);
+                const selected = upcoming || state.outings[0];
+                state.selectedOutingId = (selected.id || selected.slug || '').toString() || null;
+            }
+
             renderOutingOptions();
+
+            // Charger immédiatement les confirmations pour la sortie pré‑sélectionnée
+            if (state.selectedOutingId) {
+                await refreshRegistrations(true);
+            }
         } catch (error) {
             console.error(`${LOG_PREFIX} Erreur chargement sorties`, error);
             notify(error.message || 'Impossible de charger les sorties.', 'error');
@@ -683,8 +705,11 @@
             }
         });
 
-        loadChildren();
-        loadOutings();
+        // Charger d'abord les enfants (Supabase) pour avoir la liste complète (25), puis les sorties
+        (async function initAsync() {
+            await loadChildren();
+            await loadOutings();
+        })();
     }
 
     ready(init);

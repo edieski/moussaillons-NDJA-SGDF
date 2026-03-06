@@ -4,7 +4,8 @@
     "test:persistence": "node ./scripts/testBasicPersistence.mjs",
     "test:persistence:full": "node ./scripts/testFullPersistence.mjs",
     "test:carpool": "node ./scripts/testCarpoolAndAttendance.mjs",
-    "test:carpool:full": "node ./scripts/testCarpoolPersistenceFull.mjs"
+    "test:carpool:full": "node ./scripts/testCarpoolPersistenceFull.mjs",
+    "import:outings": "node ./scripts/importOutingsFromJson.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.80.0"

@@ -3158,7 +3158,7 @@
             document.getElementById('colorGold').value = '#FFD166';
             document.getElementById('colorMarine').value = '#1B1F3B';
             document.getElementById('mainTitle').value = 'Mon carnet d\'aventure';
-            document.getElementById('subtitle').value = 'Prochaine sortie á Jambville  Octobre 2025';
+            document.getElementById('subtitle').value = 'Prochaine sortie week-end de mars · Mars 2026 Jambville';
             
             // Supprimer la personnalisation sauvegardée
             localStorage.removeItem('admin-customization');
@@ -3173,7 +3173,7 @@
             const subtitleElement = document.querySelector('.fey-subtitle');
             
             if (titleElement) titleElement.textContent = 'Mon carnet d\'aventure';
-            if (subtitleElement) subtitleElement.textContent = 'Prochaine sortie á Jambville  Octobre 2025';
+            if (subtitleElement) subtitleElement.textContent = 'Prochaine sortie week-end de mars · Mars 2026 Jambville';
             
             alert('ä Personnalisation réinitialisée !');
         }

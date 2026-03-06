@@ -44,7 +44,7 @@
         },
 
         // Janvier 2026
-        '18-1-2026': {
+        '17-1-2026': {
             title: '⚓ Sortie Musée de la Marine',
             time: 'Dimanche',
             description: 'Sortie Musée de la Marine + galettes'

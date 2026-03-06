@@ -218,6 +218,7 @@
 
         const kidSpots = row.kid_spots ?? row.seats_available ?? fallback.kid_spots ?? fallback.seats_available ?? 0;
         const adultSpots = row.adult_spots ?? fallback.adult_spots ?? 0;
+        const isLogistics = row.is_logistics === true || (kidSpots || 0) <= 0;
 
         const hasExplicitRoundTrip = row.round_trip !== undefined && row.round_trip !== null && row.round_trip !== '';
         const fallbackRoundTrip = fallback.round_trip;
@@ -257,6 +258,7 @@
             kid_spots: kidSpots,
             adult_spots: adultSpots,
             seats_available: row.seats_available ?? kidSpots,
+            is_logistics: isLogistics,
             round_trip: inferredRoundTrip,
             is_round_trip: isRoundTrip,
             supports_outbound: resolvedSupportsOutbound,
@@ -714,14 +716,24 @@
 
         try {
             const outingId = participantData.outing_id || participantData.trip_id;
+            const driverId = participantData.car_id || participantData.driver_id || null;
             const direction = normalizeDirection(
                 participantData.direction,
                 { allowRoundTrip: true, defaultDirection: DIRECTIONS.OUTBOUND }
             );
 
+            if (driverId) {
+                const driver = getDriverById(outingId, driverId);
+                const kidSpots = driver && (driver.kid_spots ?? driver.seats_available ?? 0);
+                if (!driver || (kidSpots || 0) <= 0) {
+                    notify('Cette voiture est réservée au matériel/courses et ne peut pas transporter de passagers.', 'error');
+                    return null;
+                }
+            }
+
             const insertPayload = {
                 outing_id: outingId,
-                driver_id: participantData.car_id || participantData.driver_id || null,
+                driver_id: driverId,
                 child_id: null, // Adults don't have a child_id
                 child_name: participantData.participant_name || participantData.name || '',
                 guardian_name: '',

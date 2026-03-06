@@ -142,6 +142,30 @@ function checkSession() {
     if (isLoggedIn) {
         loginEl.style.display = 'none';
         mainEl.style.display = 'block';
+        // Sur la page d'accueil, s'assurer qu'une section est affichée (liste / sac)
+        try {
+            const hasTabbedPages = document.querySelectorAll('.fey-page').length > 0;
+            const hasActivePage = document.querySelector('.fey-page.active') !== null;
+            const isIndexPage =
+                /index\.html$/i.test(window.location.pathname) ||
+                window.location.pathname.endsWith('/') ||
+                window.location.pathname === '';
+
+            if (hasTabbedPages && !hasActivePage && isIndexPage && typeof window.showPage === 'function') {
+                const hash = window.location.hash ? window.location.hash.replace('#', '') : '';
+                const hashTarget = hash ? document.getElementById(hash) : null;
+
+                // Si on a un hash valide (ex: index.html#infos), on affiche directement cette section
+                if (hashTarget) {
+                    window.showPage(hash);
+                } else {
+                    // Sinon, comportement par défaut : redirection vers la liste
+                    window.location.href = 'liste.html';
+                }
+                return;
+            }
+        } catch (_) {}
+
         if (isAdmin && typeof enableAdminMode === 'function') {
             try { enableAdminMode(); } catch (e) {}
         }

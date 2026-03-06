@@ -174,7 +174,7 @@
 
         <h1 class="fey-title">🌲 Mon carnet d'aventure 🌲</h1>
 
-        <p class="fey-subtitle">Prochaine sortie à Jambville · Octobre 2025</p>
+        <p class="fey-subtitle">Prochaine sortie week-end de mars · Mars 2026 Jambville</p>
 
 
 
@@ -1880,7 +1880,7 @@ Ambre</textarea>
 
                             <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">📍 Sous-titre</label>
 
-                            <input type="text" value="Prochaine sortie à Jambville · Octobre 2025" id="subtitle" style="width: 100%; padding: 0.5rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm);">
+                            <input type="text" value="Prochaine sortie week-end de mars · Mars 2026 Jambville" id="subtitle" style="width: 100%; padding: 0.5rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm);">
 
                         </div>
 
@@ -2290,7 +2290,7 @@ Ambre</textarea>
 
 
             <!-- Gestion des Sorties avec Supabase -->
-            <div class="fey-card" style="background: linear-gradient(135deg, #E8F5E8, #C8E6C9); border-left: 6px solid #4CAF50;">
+            <div id="admin-outings" class="fey-card" style="background: linear-gradient(135deg, #E8F5E8, #C8E6C9); border-left: 6px solid #4CAF50;">
                 <div class="fey-card-header">🏕️ Gestion des Sorties</div>
 
                 <div class="fey-note" style="margin-bottom: 1.5rem;">
@@ -2710,6 +2710,12 @@ Ambre</textarea>
 
                     }
 
+                    if (typeof loadAttendanceHistory === 'function') {
+
+                        loadAttendanceHistory();
+
+                    }
+
                 }, 100);
 
             }
@@ -2761,7 +2767,14 @@ Ambre</textarea>
                 document.getElementById('mainContent').style.display = 'block';
 
                 enableAdminMode();
-                showPage('tente');
+                const hash = (location.hash || '').replace('#', '').toLowerCase();
+                if (hash === 'admin' || hash === 'admin-outings') {
+                    showPage('admin');
+                    const el = document.getElementById('admin-outings');
+                    if (el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth' }), 300);
+                } else {
+                    showPage('tente');
+                }
 
             } else if (password === 'Moussaillons!2025!2026!') {
 
@@ -2840,6 +2853,20 @@ Ambre</textarea>
             // Vérifier la session
 
             checkSession();
+
+            // Si hash #admin ou #admin-outings, afficher la page admin et scroller vers les sorties
+            function applyHashNavigation() {
+                const hash = (location.hash || '').replace('#', '').toLowerCase();
+                if (hash === 'admin' || hash === 'admin-outings') {
+                    if (document.getElementById('mainContent')?.style?.display !== 'none') {
+                        if (typeof showPage === 'function') showPage('admin');
+                        const el = document.getElementById('admin-outings');
+                        if (el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth' }), 300);
+                    }
+                }
+            }
+            applyHashNavigation();
+            window.addEventListener('hashchange', applyHashNavigation);
 
         });
 
@@ -5254,733 +5281,114 @@ Ambre</textarea>
 
 
 
-        // Fonction pour charger les sorties du calendrier dans le registre
-
-        function loadTripsFromCalendar() {
-
+        // Fonction pour charger les sorties du calendrier dans le registre (une entrée par sortie, pas de doublons multi-jours)
+        async function loadTripsFromCalendar() {
             console.log('🔄 Chargement des sorties du calendrier...');
-
-            
-
             const outingsList = document.getElementById('outingsList');
-
             if (!outingsList) {
-
                 console.error('❌ outingsList non trouvé');
-
                 alert('❌ outingsList non trouvé');
-
                 return;
-
             }
-
-
-
-            console.log('✅ outingsList trouvé');
-
-
-
-            // Récupérer les événements
-
-            const events = getCalendarEvents();
-
-            console.log('📅 Événements récupérés:', Object.keys(events).length);
-
-            
-
-            if (Object.keys(events).length === 0) {
-
-                outingsList.innerHTML = '<div style="text-align: center; color: #666; padding: 2rem;">⚠️ Aucune sortie trouvée dans le calendrier</div>';
-
-                return;
-
+            outingsList.innerHTML = '<div style="text-align: center; color: #666; padding: 2rem;">🔄 Chargement...</div>';
+            try {
+                let events = {};
+                // Priorité 1 : OutingsService (Supabase) – une sortie = une entrée
+                if (window.OutingsService) {
+                    try {
+                        const outings = await window.OutingsService.list({ force: true });
+                        if (outings && outings.length > 0) {
+                            outings.forEach(outing => {
+                                const id = String(outing.id || outing.slug || '');
+                                if (!id) return;
+                                const startDate = outing.startDate || (outing.startAt ? new Date(outing.startAt) : null);
+                                const dateLabel = startDate && !isNaN(startDate.getTime())
+                                    ? startDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'numeric', year: 'numeric' })
+                                    : 'Date à confirmer';
+                                events[id] = {
+                                    title: outing.title || outing.name || 'Sortie',
+                                    dateLabel,
+                                    time: outing.departureDetails || 'Non spécifiée',
+                                    description: outing.notes || outing.description || ''
+                                };
+                            });
+                        }
+                    } catch (e) {
+                        console.warn('OutingsService indisponible, passage au fallback', e);
+                    }
+                }
+                // Priorité 2 : admin-outings (localStorage) ou défaut – dédupliqué
+                if (Object.keys(events).length === 0) {
+                    events = getCalendarEventsForRegistre();
+                }
+                window.registreEventsMap = events;
+                if (Object.keys(events).length === 0) {
+                    outingsList.innerHTML = '<div style="text-align: center; color: #666; padding: 2rem;">⚠️ Aucune sortie trouvée</div>';
+                    return;
+                }
+                let checkboxesHTML = '';
+                let count = 0;
+                const entries = Object.entries(events).sort((a, b) => {
+                    const da = a[1].dateLabel || '';
+                    const db = b[1].dateLabel || '';
+                    return da.localeCompare(db);
+                });
+                entries.forEach(([key, event], idx) => {
+                    const tripId = key;
+                    const displayDate = event.dateLabel || key.replace(/-/g, '/');
+                    const safeId = 'outing_reg_' + idx;
+                    const escapedTripId = (tripId || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                    checkboxesHTML += `
+                        <div style="display: flex; align-items: center; padding: 0.5rem; border-bottom: 1px solid #eee;">
+                            <input type="checkbox" id="${safeId}" data-trip-id="${(tripId || '').replace(/"/g, '&quot;')}" value="${(tripId || '').replace(/"/g, '&quot;')}" onchange="selectOuting('${escapedTripId}')" style="margin-right: 0.75rem; transform: scale(1.2);">
+                            <label for="${safeId}" style="flex: 1; cursor: pointer; font-size: 1rem;">
+                                <strong>${(event.title || 'Sortie').replace(/</g, '&lt;')}</strong>
+                                <br><small style="color: #666;">${(displayDate || '').replace(/</g, '&lt;')}</small>
+                            </label>
+                        </div>
+                    `;
+                    count++;
+                });
+                outingsList.innerHTML = checkboxesHTML;
+                console.log(`✅ ${count} sorties chargées (sans doublons)`);
+                if (typeof window.showNotification === 'function') {
+                    window.showNotification(`${count} sortie${count > 1 ? 's' : ''} chargée${count > 1 ? 's' : ''}`, 'success');
+                } else {
+                    alert(`✅ ${count} sortie${count > 1 ? 's' : ''} chargée${count > 1 ? 's' : ''}`);
+                }
+            } catch (err) {
+                console.error('Erreur loadTripsFromCalendar', err);
+                outingsList.innerHTML = '<div style="text-align: center; color: #c62828; padding: 2rem;">⚠️ Erreur de chargement</div>';
             }
-
-            
-
-            // Construire le HTML des cases à cocher
-
-            let checkboxesHTML = '';
-
-            let count = 0;
-
-            
-
-            Object.entries(events).forEach(([dateKey, event]) => {
-
-                console.log(`📅 Ajout: ${dateKey} - ${event.title}`);
-
-                
-
-                // Créer un ID simple
-
-                const tripId = dateKey.replace(/-/g, '_');
-
-                
-
-                // Créer une case à cocher
-
-                checkboxesHTML += `
-
-                    <div style="display: flex; align-items: center; padding: 0.5rem; border-bottom: 1px solid #eee;">
-
-                        <input type="checkbox" id="outing_${tripId}" value="${tripId}" onchange="selectOuting('${tripId}')" style="margin-right: 0.75rem; transform: scale(1.2);">
-
-                        <label for="outing_${tripId}" style="flex: 1; cursor: pointer; font-size: 1rem;">
-
-                            <strong>${event.title}</strong>
-
-                            <br><small style="color: #666;">${dateKey}</small>
-
-                        </label>
-
-                    </div>
-
-                `;
-
-                count++;
-
-                
-
-                console.log(`✅ Case à cocher ajoutée: ${event.title}`);
-
-            });
-
-            
-
-            // Remplacer le contenu
-
-            outingsList.innerHTML = checkboxesHTML;
-
-            
-
-            console.log(`✅ ${count} sorties ajoutées avec cases à cocher`);
-
-            alert(`✅ ${count} sorties chargées avec cases à cocher`);
-
         }
 
         
 
         // Fonction pour gérer la sélection d'une sortie
-
         function selectOuting(tripId) {
-
-            console.log('🎯 Sortie sélectionnée:', tripId);
-
-            
-
-            // Décocher toutes les autres cases
-
             const allCheckboxes = document.querySelectorAll('#outingsList input[type="checkbox"]');
-
-            allCheckboxes.forEach(checkbox => {
-
-                if (checkbox.value !== tripId) {
-
-                    checkbox.checked = false;
-
-                }
-
+            const selectedCb = Array.from(allCheckboxes).find(cb => cb.value === tripId || cb.dataset.tripId === tripId);
+            allCheckboxes.forEach(cb => {
+                if (cb !== selectedCb) cb.checked = false;
             });
-
-            
-
-            // Charger les détails de la sortie sélectionnée
-
-            if (document.getElementById(`outing_${tripId}`).checked) {
-
+            if (selectedCb && selectedCb.checked) {
                 loadAttendanceForOuting(tripId);
-
             } else {
-
-                // Masquer les détails si décoché
-
-                const outingInfo = document.getElementById('outingInfo');
-
-                if (outingInfo) {
-
-                    outingInfo.style.display = 'none';
-
-                }
-
+                const oi = document.getElementById('outingInfo');
+                if (oi) oi.style.display = 'none';
             }
-
         }
         // Fonction pour récupérer les événements du calendrier
 
         function getCalendarEvents() {
-
-            // Récupérer les sorties depuis le localStorage (admin-outings)
-
-            const adminOutings = JSON.parse(localStorage.getItem('admin-outings') || '[]');
-
-            
-
-            // Convertir les sorties admin en format événements calendrier
-
-            const events = {};
-
-            
-
-            adminOutings.forEach(outing => {
-
-                // Convertir la date au format DD-MM-YYYY pour la clé
-
-                const dateKey = outing.startDate.split('-').reverse().join('-');
-
-                
-
-                events[dateKey] = {
-
-                    title: outing.name,
-
-                    time: outing.departureTime || 'Non spécifiée',
-
-                    description: outing.description || 'Aucune description'
-
-                };
-
-            });
-
-            
-
-            // Si aucune sortie admin, utiliser les sorties par défaut du programme 2025-2026
-
-            if (Object.keys(events).length === 0) {
-
-                return getDefaultCalendarEvents();
-
+            if (window.registreEventsMap && Object.keys(window.registreEventsMap).length > 0) {
+                return window.registreEventsMap;
             }
-
-            
-
-            // Code de fallback (ne devrait plus être utilisé)
-
-            return {
-
-                // Décembre 2024
-
-                '15-12-2024': {
-
-                    title: '🕯️ Lumière de Bethléem 2024',
-
-                    time: 'Dimanche',
-
-                    description: 'Lumière de Bethléem + Crèche vivante'
-
-                },
-
-                '21-12-2024': {
-
-                    title: '🎄 Réunion de Fin d\'Année',
-
-                    time: 'Samedi',
-
-                    description: 'Réunion de clôture de l\'année 2024'
-
-                },
-
-                '22-12-2024': {
-
-                    title: '🎄 Réunion de Fin d\'Année',
-
-                    time: 'Dimanche',
-
-                    description: 'Réunion de clôture de l\'année 2024'
-
-                },
-
-
-
-                // Janvier 2025
-
-                '5-1-2025': {
-
-                    title: '📋 Réunion de Rentrée',
-
-                    time: 'Dimanche',
-
-                    description: 'Réunion de rentrée pour l\'année 2025'
-
-                },
-
-                '19-1-2025': {
-
-                    title: '⚓ Sortie Musée de la Marine',
-
-                    time: 'Dimanche',
-
-                    description: 'Sortie Musée de la Marine + galettes'
-
-                },
-
-                '26-1-2025': {
-
-                    title: '❄️ Weekend de Janvier',
-
-                    time: 'Samedi - Départ',
-
-                    description: 'Weekend d\'hiver avec activités scoutes'
-
-                },
-
-                '27-1-2025': {
-
-                    title: '❄️ Weekend de Janvier',
-
-                    time: 'Dimanche - Retour',
-
-                    description: 'Weekend d\'hiver avec activités scoutes'
-
-                },
-
-
-
-                // Février 2025
-
-                '2-2-2025': {
-
-                    title: '❄️ Weekend de Février',
-
-                    time: 'Dimanche - Retour',
-
-                    description: 'Weekend d\'hiver avec activités scoutes'
-
-                },
-
-                '9-2-2025': {
-
-                    title: '🗼 Sortie Montmartre',
-
-                    time: 'Dimanche',
-
-                    description: 'Découverte de Montmartre'
-
-                },
-
-                '16-2-2025': {
-
-                    title: '❄️ Weekend de Février',
-
-                    time: 'Samedi - Départ',
-
-                    description: 'Weekend d\'hiver avec activités scoutes'
-
-                },
-
-                '23-2-2025': {
-
-                    title: '🏰 Sortie Château',
-
-                    time: 'Dimanche',
-
-                    description: 'Visite d\'un château historique'
-
-                },
-
-
-
-                // Mars 2025
-
-                '2-3-2025': {
-
-                    title: '🌸 Weekend de Mars',
-
-                    time: 'Dimanche - Retour',
-
-                    description: 'Weekend de printemps'
-
-                },
-
-                '9-3-2025': {
-
-                    title: '🌿 Sortie Nature',
-
-                    time: 'Dimanche',
-
-                    description: 'Sortie découverte de la nature'
-
-                },
-
-                '16-3-2025': {
-
-                    title: '🌸 Weekend de Mars',
-
-                    time: 'Samedi - Départ',
-
-                    description: 'Weekend de printemps'
-
-                },
-
-                '23-3-2025': {
-
-                    title: '🎭 Sortie Culturelle',
-
-                    time: 'Dimanche',
-
-                    description: 'Sortie culturelle et artistique'
-
-                },
-
-                '30-3-2025': {
-
-                    title: '🌸 Weekend de Mars',
-
-                    time: 'Dimanche - Retour',
-
-                    description: 'Weekend de printemps'
-
-                },
-
-
-
-                // Avril 2025
-
-                '6-4-2025': {
-
-                    title: '🐰 Weekend de Pâques',
-
-                    time: 'Samedi - Départ',
-
-                    description: 'Weekend de Pâques avec activités spéciales'
-
-                },
-
-                '13-4-2025': {
-
-                    title: '🐰 Weekend de Pâques',
-
-                    time: 'Dimanche - Retour',
-
-                    description: 'Weekend de Pâques avec activités spéciales'
-
-                },
-
-                '20-4-2025': {
-
-                    title: '🌿 Sortie Nature',
-
-                    time: 'Dimanche',
-
-                    description: 'Sortie découverte de la nature printanière'
-
-                },
-
-                '27-4-2025': {
-
-                    title: '🌸 Weekend d\'Avril',
-
-                    time: 'Samedi - Départ',
-
-                    description: 'Weekend de printemps'
-
-                },
-
-
-
-                // Mai 2025
-
-                '4-5-2025': {
-
-                    title: '🌸 Weekend de Mai',
-
-                    time: 'Dimanche - Retour',
-
-                    description: 'Weekend de printemps'
-
-                },
-
-                '11-5-2025': {
-
-                    title: '⛵ Sortie Voile',
-
-                    time: 'Dimanche',
-
-                    description: 'Sortie voile à Verneuil sur Seine'
-
-                },
-
-                '18-5-2025': {
-
-                    title: '🌸 Weekend de Mai',
-
-                    time: 'Samedi - Départ',
-
-                    description: 'Weekend de printemps'
-
-                },
-
-                '25-5-2025': {
-
-                    title: '🎭 Sortie Culturelle',
-
-                    time: 'Dimanche',
-
-                    description: 'Sortie culturelle et artistique'
-
-                },
-
-
-
-                // Juin 2025
-
-                '1-6-2025': {
-
-                    title: '☀️ Weekend de Juin',
-
-                    time: 'Dimanche - Retour',
-
-                    description: 'Weekend d\'été'
-
-                },
-
-                '8-6-2025': {
-
-                    title: '🌿 Sortie Nature',
-
-                    time: 'Dimanche',
-
-                    description: 'Sortie découverte de la nature estivale'
-
-                },
-
-                '15-6-2025': {
-
-                    title: '☀️ Weekend de Juin',
-
-                    time: 'Samedi - Départ',
-
-                    description: 'Weekend d\'été'
-
-                },
-
-                '22-6-2025': {
-
-                    title: '🎯 Sortie Finale',
-
-                    time: 'Dimanche',
-
-                    description: 'Sortie de clôture de l\'année scolaire'
-
-                },
-
-                '29-6-2025': {
-
-                    title: '📋 Réunion de Fin d\'Année',
-
-                    time: 'Dimanche',
-
-                    description: 'Réunion de clôture de l\'année scolaire'
-
-                },
-
-
-
-                // Juillet 2025 - Camp d'été
-
-                '6-7-2025': {
-
-                    title: '🏕️ Camp d\'Été 2025',
-
-                    time: 'Début du camp',
-
-                    description: 'Camp d\'été - Première quinzaine des vacances Zone C'
-
-                },
-
-                '7-7-2025': {
-
-                    title: '🏕️ Camp d\'Été 2025',
-
-                    time: 'Jour 2',
-
-                    description: 'Camp d\'été - Première quinzaine des vacances Zone C'
-
-                },
-
-                '8-7-2025': {
-
-                    title: '🏕️ Camp d\'Été 2025',
-
-                    time: 'Jour 3',
-
-                    description: 'Camp d\'été - Première quinzaine des vacances Zone C'
-
-                },
-
-                '9-7-2025': {
-
-                    title: '🏕️ Camp d\'Été 2025',
-
-                    time: 'Jour 4',
-
-                    description: 'Camp d\'été - Première quinzaine des vacances Zone C'
-
-                },
-
-                '10-7-2025': {
-
-                    title: '🏕️ Camp d\'Été 2025',
-
-                    time: 'Jour 5',
-
-                    description: 'Camp d\'été - Première quinzaine des vacances Zone C'
-
-                },
-
-                '11-7-2025': {
-
-                    title: '🏕️ Camp d\'Été 2025',
-
-                    time: 'Jour 6',
-
-                    description: 'Camp d\'été - Première quinzaine des vacances Zone C'
-
-                },
-
-                '12-7-2025': {
-
-                    title: '🏕️ Camp d\'Été 2025',
-
-                    time: 'Jour 7',
-
-                    description: 'Camp d\'été - Première quinzaine des vacances Zone C'
-
-                },
-
-                '13-7-2025': {
-
-                    title: '🏕️ Camp d\'Été 2025',
-
-                    time: 'Jour 8',
-
-                    description: 'Camp d\'été - Première quinzaine des vacances Zone C'
-
-                },
-
-                '14-7-2025': {
-
-                    title: '🏕️ Camp d\'Été 2025',
-
-                    time: 'Jour 9',
-
-                    description: 'Camp d\'été - Première quinzaine des vacances Zone C'
-
-                },
-
-                '15-7-2025': {
-
-                    title: '🏕️ Camp d\'Été 2025',
-
-                    time: 'Jour 10',
-
-                    description: 'Camp d\'été - Première quinzaine des vacances Zone C'
-
-                },
-
-                '16-7-2025': {
-
-                    title: '🏕️ Camp d\'Été 2025',
-
-                    time: 'Jour 11',
-
-                    description: 'Camp d\'été - Première quinzaine des vacances Zone C'
-
-                },
-
-                '17-7-2025': {
-
-                    title: '🏕️ Camp d\'Été 2025',
-
-                    time: 'Jour 12',
-
-                    description: 'Camp d\'été - Première quinzaine des vacances Zone C'
-
-                },
-
-                '18-7-2025': {
-
-                    title: '🏕️ Camp d\'Été 2025',
-
-                    time: 'Jour 13',
-
-                    description: 'Camp d\'été - Première quinzaine des vacances Zone C'
-
-                },
-
-                '19-7-2025': {
-
-                    title: '🏕️ Camp d\'Été 2025',
-
-                    time: 'Fin du camp',
-
-                    description: 'Camp d\'été - Première quinzaine des vacances Zone C'
-
-                },
-
-
-
-                // Octobre 2025
-
-                '3-10-2025': {
-
-                    title: '🏕️ Weekend de Groupe',
-
-                    time: 'Samedi - Départ',
-
-                    description: 'Weekend de groupe avec activités scoutes'
-
-                },
-
-                '4-10-2025': {
-
-                    title: '🏕️ Weekend de Groupe',
-
-                    time: 'Dimanche - Retour',
-
-                    description: 'Weekend de groupe avec activités scoutes'
-
-                },
-
-                '12-10-2025': {
-
-                    title: '⛵ Sortie Voile',
-
-                    time: 'Dimanche',
-
-                    description: 'Sortie voile à Verneuil sur Seine'
-
-                },
-
-
-
-                // Novembre 2025
-
-                '15-11-2025': {
-
-                    title: '🏰 Weekend Abbaye d\'Epernon',
-
-                    time: 'Samedi - Départ',
-
-                    description: 'Weekend à l\'Abbaye d\'Epernon'
-
-                },
-
-                '16-11-2025': {
-
-                    title: '🏰 Weekend Abbaye d\'Epernon',
-
-                    time: 'Dimanche - Retour',
-
-                    description: 'Weekend à l\'Abbaye d\'Epernon'
-
-                }
-
-            };
-
+            const events = getCalendarEventsForRegistre();
+            if (Object.keys(events).length > 0) return events;
+            return typeof window.getDefaultCalendarEvents === 'function' ? window.getDefaultCalendarEvents() : {};
         }
-        // Fonction pour charger le registre d'une sortie
+
 
         function loadTripRegistry() {
 
@@ -9114,8 +8522,7 @@ Ambre</textarea>
 
 
         // Charger le registre d'appel pour une sortie sélectionnée
-
-        function loadAttendanceForOuting(tripId) {
+        async function loadAttendanceForOuting(tripId) {
 
             if (!tripId) {
 
@@ -9150,17 +8557,16 @@ Ambre</textarea>
 
 
             // Afficher les informations de la sortie
-displayOutingInfo(event, dateKey);
-
-            
-
-            // Créer la liste d'appel
-
-            createAttendanceList(tripId, event);
+            displayOutingInfo(event, dateKey);
 
             document.getElementById('outingInfo').style.display = 'block';
 
             document.getElementById('participantsList').style.display = 'block';
+
+            
+
+            // Créer la liste d'appel (charge les enfants depuis Supabase)
+            await createAttendanceList(tripId, event);
 
         }
 
@@ -9208,69 +8614,33 @@ displayOutingInfo(event, dateKey);
 
         
 
-        // Créer la liste d'appel avec les enfants
+        // Helper: liste des enfants pour l'appel (Supabase prioritaire, sinon fallback)
+        function getAttendanceChildrenList() {
+            if (scoutChildren && scoutChildren.length > 0) {
+                return scoutChildren.map(c => `${(c.nom || '').trim()} ${(c.prenom || '').trim()}`.trim().toUpperCase()).filter(Boolean);
+            }
+            return DEFAULT_SCOUT_CHILDREN.map(c => `${c.nom} ${c.prenom}`);
+        }
 
-        function createAttendanceList(tripId, event) {
+        // Créer la liste d'appel avec les enfants (charge depuis Supabase pour avoir les 25)
+        async function createAttendanceList(tripId, event) {
 
             const participantsList = document.getElementById('participantsList');
 
             if (!participantsList) return;
 
-            
-
-            // Liste des enfants scouts (copie directe pour éviter les problèmes de portée)
-
-            const children = [
-
-                'DESCAMPS JEANNE',
-
-                'LAURENT BILLET CLAIRE', 
-
-                'PICHEREAU JULES',
-
-                'POTTER FELIX',
-
-                'ROUSSEAU LEOPOLD',
-
-                'JEANJEAN MADELEINE',
-
-                'LALIGAND LEA',
-
-                'MILLART CONSTANCE',
-
-                'REYNAL DE SAINT MICHEL ALEXIA',
-
-                'D\'ANDREA DANTE',
-
-                'JANDARD LEV',
-
-                'ROIG OCTAVE',
-
-                'RUEF ALFRED',
-
-                'MATHIEN AMBRE',
-
-                'FAUGERE LEA',
-
-                'GENTIL CONSTANCE',
-
-                'HUCHEZ SIBYLLE',
-
-                'LANASPRE ROMANE',
-
-                'NIERAT ZOE',
-
-                'SERVONNAT LOUISON',
-
-                'WARGNIER GABRIELLE',
-
-                'POTTER OSCAR',
-
-                'ROIG JULES',
-
-                'TALPAERT GABRIEL'
-
-            ];
+            let children = getAttendanceChildrenList();
+            if (window.ChildrenService) {
+                try {
+                    const list = await window.ChildrenService.list();
+                    if (Array.isArray(list) && list.length > 0) {
+                        const fromSupabase = list.map(c => ({ nom: c.nom, prenom: c.prenom }));
+                        scoutChildren = fromSupabase;
+                        children = fromSupabase.map(c => `${(c.nom || '').trim()} ${(c.prenom || '').trim()}`.trim().toUpperCase()).filter(Boolean);
+                    }
+                } catch (e) { console.warn('ChildrenService list failed', e); }
+            }
+            if (children.length === 0) children = DEFAULT_SCOUT_CHILDREN.map(c => `${c.nom} ${c.prenom}`);
 
             
 
@@ -9278,9 +8648,21 @@ displayOutingInfo(event, dateKey);
 
             
 
-            // Récupérer les présences sauvegardées
-
-            const savedAttendance = JSON.parse(localStorage.getItem(`attendance_${tripId}`) || '{}');
+            // Récupérer les présences : Supabase prioritaire, sinon localStorage (rétrocompat)
+            let savedAttendance = JSON.parse(localStorage.getItem(`attendance_${tripId}`) || '{}');
+            if (window.AttendanceService && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(tripId))) {
+                try {
+                    const records = await window.AttendanceService.list(tripId, { force: true });
+                    if (records && records.length > 0) {
+                        const fromSupabase = {};
+                        records.forEach(r => {
+                            fromSupabase[r.scout_name] = (r.status === 'present');
+                        });
+                        savedAttendance = fromSupabase;
+                        localStorage.setItem(`attendance_${tripId}`, JSON.stringify(fromSupabase));
+                    }
+                } catch (e) { console.warn('AttendanceService list failed, fallback localStorage', e); }
+            }
 
             
 
@@ -9318,7 +8700,7 @@ displayOutingInfo(event, dateKey);
 
                                ${isPresent ? 'checked' : ''} 
 
-                               onchange="updateAttendance('${tripId}', '${child}', this.checked)"
+                               onchange="updateAttendance('${tripId.replace(/'/g, "\\'")}', '${child.replace(/'/g, "\\'")}', this.checked)"
 
                                style="margin-right: 1rem; transform: scale(1.3);">
 
@@ -9348,13 +8730,13 @@ displayOutingInfo(event, dateKey);
 
                     <div style="margin-top: 1rem; text-align: center;">
 
-                        <button onclick="saveAttendance('${tripId}')" class="fey-btn" style="background: #4CAF50; padding: 0.75rem 1.5rem; margin-right: 1rem;">
+                        <button onclick="saveAttendance('${tripId.replace(/'/g, "\\'")}')" class="fey-btn" style="background: #4CAF50; padding: 0.75rem 1.5rem; margin-right: 1rem;">
 
                             💾 Sauvegarder l'Appel
 
                         </button>
 
-                        <button onclick="exportAttendance('${tripId}')" class="fey-btn" style="background: #2196F3; padding: 0.75rem 1.5rem;">
+                        <button onclick="exportAttendance('${tripId.replace(/'/g, "\\'")}')" class="fey-btn" style="background: #2196F3; padding: 0.75rem 1.5rem;">
 
                             📊 Exporter
 
@@ -9387,59 +8769,7 @@ displayOutingInfo(event, dateKey);
             
 
             // Mettre à jour l'affichage en trouvant l'élément par l'index
-
-            const children = [
-
-                'DESCAMPS JEANNE',
-
-                'LAURENT BILLET CLAIRE', 
-
-                'PICHEREAU JULES',
-
-                'POTTER FELIX',
-
-                'ROUSSEAU LEOPOLD',
-
-                'JEANJEAN MADELEINE',
-
-                'LALIGAND LEA',
-
-                'MILLART CONSTANCE',
-
-                'REYNAL DE SAINT MICHEL ALEXIA',
-
-                'D\'ANDREA DANTE',
-
-                'JANDARD LEV',
-
-                'ROIG OCTAVE',
-
-                'RUEF ALFRED',
-
-                'MATHIEN AMBRE',
-
-                'FAUGERE LEA',
-
-                'GENTIL CONSTANCE',
-
-                'HUCHEZ SIBYLLE',
-
-                'LANASPRE ROMANE',
-
-                'NIERAT ZOE',
-
-                'SERVONNAT LOUISON',
-
-                'WARGNIER GABRIELLE',
-
-                'POTTER OSCAR',
-
-                'ROIG JULES',
-
-                'TALPAERT GABRIEL'
-
-            ];
-
+            const children = getAttendanceChildrenList();
             const childIndex = children.indexOf(childName);
 
             
@@ -9474,9 +8804,8 @@ displayOutingInfo(event, dateKey);
 
         
 
-        // Sauvegarder l'appel
-
-        function saveAttendance(tripId) {
+        // Sauvegarder l'appel (localStorage + Supabase si mot de passe chef)
+        async function saveAttendance(tripId) {
 
             const savedAttendance = JSON.parse(localStorage.getItem(`attendance_${tripId}`) || '{}');
 
@@ -9486,11 +8815,29 @@ displayOutingInfo(event, dateKey);
 
             
 
-            // Sauvegarder dans l'historique
+            // Sauvegarder dans Supabase si disponible (mot de passe chef requis)
+            if (window.AttendanceService && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(tripId))) {
+                const secret = prompt('Mot de passe chef pour enregistrer dans Supabase (vide = ignorer) :');
+                if (secret) {
+                    try {
+                        const records = Object.entries(savedAttendance).map(([scout_name, isPresent]) => ({
+                            scout_name,
+                            status: isPresent ? 'present' : 'absent'
+                        }));
+                        await window.AttendanceService.bulkUpsert(tripId, records, secret);
+                    } catch (e) {
+                        alert('❌ Erreur Supabase : ' + (e.message || e));
+                        return;
+                    }
+                }
+            }
 
+            
+
+            // Sauvegarder dans l'historique (localStorage, rétrocompat)
             const history = JSON.parse(localStorage.getItem('attendance-history') || '[]');
 
-            const event = getCalendarEvents()[tripId.replace(/_/g, '-')];
+            const event = getCalendarEvents()[tripId] || getCalendarEvents()[tripId.replace(/_/g, '-')] || { title: 'Sortie' };
 
             
 
@@ -9498,7 +8845,7 @@ displayOutingInfo(event, dateKey);
 
                 id: tripId,
 
-                title: event.title,
+                title: event.title || 'Sortie',
 
                 date: tripId.replace(/_/g, '-'),
 
@@ -9514,27 +8861,16 @@ displayOutingInfo(event, dateKey);
 
             
 
-            // Supprimer l'ancien enregistrement s'il existe
-
             const existingIndex = history.findIndex(h => h.id === tripId);
 
-            if (existingIndex !== -1) {
-
-                history[existingIndex] = record;
-
-            } else {
-
-                history.push(record);
-
-            }
+            if (existingIndex !== -1) history[existingIndex] = record;
+            else history.push(record);
 
             
 
             localStorage.setItem('attendance-history', JSON.stringify(history));
 
             
-
-            // Recharger l'historique pour l'afficher
 
             loadAttendanceHistory();
 
@@ -9640,20 +8976,196 @@ displayOutingInfo(event, dateKey);
 
         
 
-        // Supprimer tout l'historique
+        // Supprimer tout l'historique (localStorage). Pour Supabase, supprimez chaque registre individuellement.
+        async function clearAllAttendanceHistory() {
 
-        function clearAllAttendanceHistory() {
+            if (!confirm('⚠️ Êtes-vous sûr de vouloir supprimer TOUT l\'historique des appels ? Cette action est irréversible.')) return;
 
-            if (confirm('⚠️ Êtes-vous sûr de vouloir supprimer TOUT l\'historique des appels ? Cette action est irréversible.')) {
+            localStorage.removeItem('attendance-history');
 
-                localStorage.removeItem('attendance-history');
-
-                loadAttendanceHistory();
-
-                alert('🗑️ Historique complètement supprimé !');
-
+            if (window.AttendanceService && window.OutingsService) {
+                const secret = prompt('Mot de passe chef pour supprimer tous les registres Supabase (vide = historique local uniquement) :');
+                if (secret) {
+                    try {
+                        const outings = await window.OutingsService.list({ force: true });
+                        for (const o of outings || []) {
+                            const id = String(o.id || o.slug || '');
+                            if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+                                await window.AttendanceService.clear(id, secret);
+                            }
+                        }
+                    } catch (e) {
+                        alert('❌ Erreur Supabase : ' + (e.message || e));
+                    }
+                }
             }
 
+            loadAttendanceHistory();
+
+            alert('🗑️ Historique complètement supprimé !');
+
+        }
+
+
+
+        // Charger et afficher l'historique des registres d'appel (Supabase + localStorage)
+        async function loadAttendanceHistory() {
+            const historyContainer = document.getElementById('attendanceHistory');
+            if (!historyContainer) return;
+
+            let history = [];
+            const events = getCalendarEvents ? getCalendarEvents() : {};
+
+            // Priorité 1 : Supabase (outings avec des enregistrements attendance)
+            if (window.AttendanceService && window.OutingsService) {
+                try {
+                    const outings = await window.OutingsService.list({ force: false });
+                    const supabaseHistory = [];
+                    for (const o of outings || []) {
+                        const outingId = String(o.id || o.slug || '');
+                        if (!outingId) continue;
+                        const records = await window.AttendanceService.list(outingId, { force: false });
+                        if (records && records.length > 0) {
+                            const attendance = {};
+                            records.forEach(r => { attendance[r.scout_name] = r.status === 'present'; });
+                            supabaseHistory.push({
+                                id: outingId,
+                                outingId,
+                                title: o.title || o.name || 'Sortie',
+                                date: outingId,
+                                attendance,
+                                presentCount: records.filter(r => r.status === 'present').length,
+                                totalCount: records.length,
+                                timestamp: records[0]?.marked_at || new Date().toISOString()
+                            });
+                        }
+                    }
+                    const localHistory = JSON.parse(localStorage.getItem('attendance-history') || '[]');
+                    const supabaseIds = new Set(supabaseHistory.map(h => h.id || h.outingId));
+                    const extraLocal = localHistory.filter(r => {
+                        const lid = r.id || r.outingId;
+                        return lid && !supabaseIds.has(String(lid));
+                    });
+                    history = [...supabaseHistory, ...extraLocal].sort((a, b) =>
+                        (b.timestamp || '').localeCompare(a.timestamp || ''));
+                } catch (e) { console.warn('loadAttendanceHistory Supabase failed', e); }
+            }
+
+            if (history.length === 0) {
+                history = JSON.parse(localStorage.getItem('attendance-history') || '[]');
+            }
+
+            const outings = JSON.parse(localStorage.getItem('admin-outings') || '[]');
+
+            if (history.length === 0) {
+                historyContainer.innerHTML = `
+                    <div class="fey-note" style="text-align: center; padding: 2rem;">
+                        <strong>Aucun registre d'appel enregistré</strong><br>
+                        <small>Les registres d'appel apparaîtront ici une fois sauvegardés.</small>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            history.forEach(record => {
+                // Format calendrier : id, title, date, attendance (présent/absent bool), presentCount, totalCount
+                const isCalendarFormat = record.id && record.date !== undefined;
+                let recordTitle, recordDate;
+
+                if (isCalendarFormat) {
+                    recordTitle = record.title || 'Sortie';
+                    recordDate = new Date(record.timestamp || record.date).toLocaleDateString('fr-FR');
+                    const time = record.timestamp ? new Date(record.timestamp).toLocaleTimeString('fr-FR') : '';
+                    const presentCount = record.presentCount ?? Object.values(record.attendance || {}).filter(Boolean).length;
+                    const totalCount = record.totalCount ?? Object.keys(record.attendance || {}).length;
+
+                    const safeId = (record.id || '').replace(/'/g, "\\'");
+                    html += `
+                        <div class="fey-item" style="background: linear-gradient(135deg, #E3F2FD, #BBDEFB); border-left: 4px solid #2196F3; margin-bottom: 1rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                <h4 style="margin: 0; color: var(--c-marine-700);">${recordTitle.replace(/</g, '&lt;')}</h4>
+                                <small style="color: #666;">${recordDate} ${time}</small>
+                            </div>
+                            <div style="display: flex; gap: 1rem; margin-bottom: 0.5rem;">
+                                <span><strong style="color: #4CAF50;">${presentCount}</strong> présents</span>
+                                <span><strong style="color: #2196F3;">${totalCount}</strong> total</span>
+                            </div>
+                            <div style="text-align: center;">
+                                <button class="fey-btn" onclick="loadAttendanceForOuting('${safeId}'); if(typeof showPage==='function') showPage('registre');" style="background: #2196F3; font-size: 0.9rem; padding: 0.5rem 1rem; margin-right: 0.5rem;">👁️ Consulter</button>
+                                <button class="fey-btn" onclick="deleteAttendanceFromHistory('${safeId}', true)" style="background: #F44336; font-size: 0.9rem; padding: 0.5rem 1rem;">🗑️ Supprimer</button>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // Format registre : outingId, attendance (status map)
+                    const outing = outings.find(o => o.id === record.outingId);
+                    recordTitle = outing ? outing.name : 'Sortie inconnue';
+                    recordDate = record.timestamp ? new Date(record.timestamp).toLocaleDateString('fr-FR') : '-';
+                    const time = record.timestamp ? new Date(record.timestamp).toLocaleTimeString('fr-FR') : '';
+                    const stats = { present: 0, absent: 0, justified: 0, total: 0 };
+                    Object.values(record.attendance || {}).forEach(status => {
+                        stats.total++;
+                        if (status === 'present') stats.present++;
+                        else if (status === 'absent') stats.absent++;
+                        else if (status === 'justified') stats.justified++;
+                    });
+
+                    const safeOutingId = (record.outingId || '').replace(/'/g, "\\'");
+                    html += `
+                        <div class="fey-item" style="background: linear-gradient(135deg, #E3F2FD, #BBDEFB); border-left: 4px solid #2196F3; margin-bottom: 1rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                <h4 style="margin: 0; color: var(--c-marine-700);">${recordTitle.replace(/</g, '&lt;')}</h4>
+                                <small style="color: #666;">${recordDate} ${time}</small>
+                            </div>
+                            <div style="display: flex; gap: 1rem; margin-bottom: 0.5rem; flex-wrap: wrap;">
+                                <span><strong style="color: #4CAF50;">${stats.present}</strong> présents</span>
+                                <span><strong style="color: #F44336;">${stats.absent}</strong> absents</span>
+                                <span><strong style="color: #FF9800;">${stats.justified}</strong> justifiés</span>
+                                <span><strong style="color: #2196F3;">${stats.total}</strong> total</span>
+                            </div>
+                            <div style="text-align: center;">
+                                <button class="fey-btn" onclick="viewAttendanceRecord('${safeOutingId}')" style="background: #2196F3; font-size: 0.9rem; padding: 0.5rem 1rem; margin-right: 0.5rem;">👁️ Consulter</button>
+                                <button class="fey-btn" onclick="deleteAttendanceRecord('${safeOutingId}')" style="background: #F44336; font-size: 0.9rem; padding: 0.5rem 1rem;">🗑️ Supprimer</button>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            historyContainer.innerHTML = html;
+        }
+
+        // Supprimer un enregistrement calendrier de l'historique (format id/date)
+        async function deleteAttendanceFromHistory(id, isCalendarFormat) {
+            if (!confirm('⚠️ Êtes-vous sûr de vouloir supprimer ce registre d\'appel ?')) return;
+            const outingId = id;
+            if (window.AttendanceService && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(outingId))) {
+                const secret = prompt('Mot de passe chef pour supprimer dans Supabase (vide = local uniquement) :');
+                if (secret) {
+                    try {
+                        await window.AttendanceService.clear(outingId, secret);
+                    } catch (e) {
+                        alert('❌ Erreur Supabase : ' + (e.message || e));
+                        return;
+                    }
+                }
+            }
+            const history = JSON.parse(localStorage.getItem('attendance-history') || '[]');
+            const updated = isCalendarFormat
+                ? history.filter(r => r.id !== id)
+                : history.filter(r => r.outingId !== id);
+            localStorage.setItem('attendance-history', JSON.stringify(updated));
+            loadAttendanceHistory();
+            alert('🗑️ Registre supprimé.');
+        }
+
+        // Consulter un registre par outingId (format admin-outings)
+        function viewAttendanceRecord(outingId) {
+            const sel = document.getElementById('selectedOuting');
+            if (sel) sel.value = outingId;
+            if (typeof loadAttendanceForOuting === 'function') loadAttendanceForOuting(outingId);
+            if (typeof showPage === 'function') showPage('registre');
         }
 
 

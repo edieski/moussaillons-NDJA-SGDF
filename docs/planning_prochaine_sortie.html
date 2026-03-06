@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -176,6 +176,29 @@
             display: flex;
             flex-direction: column;
             gap: 2rem;
+        }
+
+        #planning-selector-card {
+            margin-bottom: 0;
+        }
+
+        #planning-outing-select {
+            width: 100%;
+            max-width: 360px;
+            border: 2px solid var(--c-ink-900);
+            border-radius: var(--r-sm);
+            padding: 0.5rem 0.75rem;
+            font-family: 'Nunito', sans-serif;
+            font-size: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .planning-scenario {
+            display: none;
+        }
+
+        .planning-scenario--active {
+            display: block;
         }
 
         .planning-header {
@@ -549,6 +572,19 @@
 
     <!-- Main Content -->
     <div class="planning-container">
+        <div class="section-card" id="planning-selector-card">
+            <h2>📌 Choisir la sortie</h2>
+            <p class="context-text">
+                Sélectionnez une sortie pour afficher son planning détaillé lorsque celui-ci est disponible.
+            </p>
+            <select id="planning-outing-select" aria-label="Choisir une sortie"></select>
+            <p class="context-text" id="planning-outing-meta"></p>
+            <p class="context-text" id="planning-missing-message" style="display: none;">
+                Aucun planning détaillé n'est encore publié pour cette sortie.
+            </p>
+        </div>
+
+        <div class="planning-scenario" data-planning-slug="weekend-abbaye-depernon-2025-11">
         <!-- Header -->
         <div class="planning-header">
             <h1>🌊 Week-end Scout 🌊</h1>
@@ -849,6 +885,7 @@
                 symbolisant leur réussite et leur engagement dans la Section Marine de Poudlard.
             </div>
         </div>
+        </div>
     </div>
     <script>
         (function () {
@@ -925,6 +962,161 @@
                 overlay.hidden = false;
                 setError('');
                 focusInput();
+            }
+        })();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/supabaseClient.js"></script>
+    <script src="js/outings-service.js"></script>
+    <script>
+        (function () {
+            'use strict';
+
+            const selector = document.getElementById('planning-outing-select');
+            const metaEl = document.getElementById('planning-outing-meta');
+            const missingEl = document.getElementById('planning-missing-message');
+            const scenarios = Array.from(document.querySelectorAll('[data-planning-slug]'));
+
+            if (!selector || !scenarios.length) {
+                return;
+            }
+
+            function findScenario(slug) {
+                if (!slug) return null;
+                return scenarios.find(el => el.dataset.planningSlug === slug) || null;
+            }
+
+            function formatDateRange(outing) {
+                if (!outing || !outing.startDate) return '';
+
+                const start = outing.startDate;
+                const end = outing.endDate;
+                const locale = 'fr-FR';
+
+                if (end && end.toDateString() !== start.toDateString()) {
+                    const shortOpts = { weekday: 'short', day: 'numeric', month: 'short' };
+                    return `${start.toLocaleDateString(locale, shortOpts)} → ${end.toLocaleDateString(locale, shortOpts)}`;
+                }
+
+                const longOpts = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+                return start.toLocaleDateString(locale, longOpts);
+            }
+
+            function setActiveScenario(slug) {
+                let activeFound = false;
+
+                scenarios.forEach(el => {
+                    if (el.dataset.planningSlug === slug) {
+                        el.classList.add('planning-scenario--active');
+                        el.style.display = '';
+                        activeFound = true;
+                    } else {
+                        el.classList.remove('planning-scenario--active');
+                        el.style.display = 'none';
+                    }
+                });
+
+                if (missingEl) {
+                    missingEl.style.display = activeFound ? 'none' : '';
+                }
+            }
+
+            function applySelection(slug, outings) {
+                const allOutings = Array.isArray(outings) ? outings : [];
+
+                if (!slug) {
+                    const defaultScenario = scenarios[0];
+                    slug = defaultScenario ? defaultScenario.dataset.planningSlug : '';
+                }
+
+                if (selector && slug) {
+                    selector.value = slug;
+                }
+
+                const outing = allOutings.find(o => o.slug === slug) || null;
+
+                if (metaEl) {
+                    if (outing) {
+                        const dateText = formatDateRange(outing);
+                        const locationText = outing.location ? ` · ${outing.location}` : '';
+                        metaEl.textContent = `${outing.title} — ${dateText}${locationText}`;
+                    } else {
+                        metaEl.textContent = '';
+                    }
+                }
+
+                setActiveScenario(slug);
+
+                try {
+                    const url = new URL(window.location.href);
+                    if (slug) {
+                        url.searchParams.set('outing', slug);
+                    } else {
+                        url.searchParams.delete('outing');
+                    }
+                    window.history.replaceState({}, '', url.toString());
+                } catch (error) {
+                    console.warn('[Planning] Impossible de mettre à jour l’URL', error);
+                }
+            }
+
+
+            async function init() {
+                const params = new URLSearchParams(window.location.search);
+                let initialSlug = params.get('outing');
+
+                if (!initialSlug) {
+                    const defaultScenario = scenarios[0];
+                    initialSlug = defaultScenario ? defaultScenario.dataset.planningSlug : '';
+                }
+
+                let outings = [];
+                const service = window.OutingsService;
+
+                if (service && typeof service.list === 'function') {
+                    try {
+                        outings = await service.list({ force: false });
+                    } catch (error) {
+                        console.error('[Planning] Erreur de chargement des sorties', error);
+                    }
+                }
+
+                if (selector) {
+                    selector.innerHTML = '';
+
+                    if (outings.length) {
+                        outings.forEach(outing => {
+                            const option = document.createElement('option');
+                            option.value = outing.slug;
+                            const dateLabel = outing.startDate
+                                ? outing.startDate.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
+                                : '';
+                            option.textContent = dateLabel
+                                ? `${dateLabel} — ${outing.title}`
+                                : outing.title;
+                            selector.appendChild(option);
+                        });
+                    } else {
+                        const option = document.createElement('option');
+                        option.value = initialSlug || '';
+                        option.textContent = 'Sortie courante';
+                        selector.appendChild(option);
+                        selector.disabled = true;
+                    }
+
+                    selector.addEventListener('change', () => {
+                        applySelection(selector.value, outings);
+                    });
+                }
+
+                applySelection(initialSlug, outings);
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
             }
         })();
     </script>

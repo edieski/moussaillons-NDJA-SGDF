@@ -250,25 +250,33 @@
         const ret = outing.returnDetails || raw.return_details || '';
         const notes = (outing.notes || raw.notes || '').toString().trim();
 
+        const isCarpoolPage = typeof window !== 'undefined' && /carpool-link\.html$/i.test(window.location?.pathname || '');
+        const editLink = isCarpoolPage
+            ? `<a href="index.html#admin-outings" class="fey-btn" style="display: inline-block; margin-top: 0.75rem; font-size: 0.9rem; padding: 0.5rem 1rem; background: #FF9800; color: white; text-decoration: none; border-radius: var(--r-sm, 8px); border: 2px solid var(--c-ink-900, #1a1a1a);">✏️ Modifier les infos (Admin)</a>`
+            : '';
+
         const metaGrid = `
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-                <div style="background: rgba(255,255,255,0.85); border: 2px solid var(--c-ink-900); border-radius: var(--r-sm); padding: 0.75rem;">
-                    <strong>🗓️ Dates</strong><br>
-                    ${end ? `${start}<br>${end}` : start}
+            <div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                    <div style="background: rgba(255,255,255,0.85); border: 2px solid var(--c-ink-900); border-radius: var(--r-sm); padding: 0.75rem;">
+                        <strong>🗓️ Dates</strong><br>
+                        ${end ? `${start}<br>${end}` : start}
+                    </div>
+                    <div style="background: rgba(255,255,255,0.85); border: 2px solid var(--c-ink-900); border-radius: var(--r-sm); padding: 0.75rem;">
+                        <strong>📍 Lieu</strong><br>
+                        ${escapeHtml(location || ' préciser')}
+                    </div>
+                    <div style="background: rgba(255,255,255,0.85); border: 2px solid var(--c-ink-900); border-radius: var(--r-sm); padding: 0.75rem;">
+                        <strong>📍 Rendez-vous</strong><br>
+                        ${escapeHtml(meetingPoint || ' préciser')}
+                    </div>
+                    <div style="background: rgba(255,255,255,0.85); border: 2px solid var(--c-ink-900); border-radius: var(--r-sm); padding: 0.75rem;">
+                        <strong>🚗 Infos départ</strong><br>
+                        ${escapeHtml(departure || ' préciser')}<br>
+                        <em>Retour :</em> ${escapeHtml(ret || ' préciser')}
+                    </div>
                 </div>
-                <div style="background: rgba(255,255,255,0.85); border: 2px solid var(--c-ink-900); border-radius: var(--r-sm); padding: 0.75rem;">
-                    <strong>📍 Lieu</strong><br>
-                    ${escapeHtml(location || ' préciser')}
-                </div>
-                <div style="background: rgba(255,255,255,0.85); border: 2px solid var(--c-ink-900); border-radius: var(--r-sm); padding: 0.75rem;">
-                    <strong>📍 Rendez-vous</strong><br>
-                    ${escapeHtml(meetingPoint || ' préciser')}
-                </div>
-                <div style="background: rgba(255,255,255,0.85); border: 2px solid var(--c-ink-900); border-radius: var(--r-sm); padding: 0.75rem;">
-                    <strong>🚗 Infos départ</strong><br>
-                    ${escapeHtml(departure || ' préciser')}<br>
-                    <em>Retour :</em> ${escapeHtml(ret || ' préciser')}
-                </div>
+                ${editLink}
             </div>
         `;
 
@@ -640,7 +648,12 @@
         const driverMap = new Map();
         const totalSeats = drivers.reduce((sum, driver) => {
             driverMap.set(normalizeId(driver.id), driver);
-            return sum + (driver.seats_available || 0);
+            const ks = driver.kid_spots ?? driver.seats_available ?? 0;
+            const isLogistics = driver.is_logistics === true || (ks || 0) <= 0;
+            if (isLogistics) {
+                return sum;
+            }
+            return sum + ks;
         }, 0);
         let totalSeatsOutbound = 0;
         let totalSeatsReturn = 0;
@@ -667,20 +680,37 @@
  
             registeredNamesSet.add(normalized);
             const hasDriver = passenger.driver_id != null && passenger.driver_id !== '' && passenger.driver_id !== undefined;
-            if (hasDriver) {
-                occupiedSeats += 1;
-                const driver = driverMap.get(normalizeId(passenger.driver_id));
-                if (driver && CarpoolManager.isDriverOutbound(driver) && CarpoolManager.passengerMatchesDirection(passenger, 'outbound')) {
-                    occupiedSeatsOutbound += 1;
-                }
-                if (driver && CarpoolManager.isDriverReturn(driver) && CarpoolManager.passengerMatchesDirection(passenger, 'return')) {
-                    occupiedSeatsReturn += 1;
-                }
+            if (!hasDriver) {
+                return;
+            }
+
+            const driver = driverMap.get(normalizeId(passenger.driver_id));
+            if (!driver) {
+                return;
+            }
+
+            // Ne pas compter les passagers dans les voitures matériel / courses
+            const ks = driver.kid_spots ?? driver.seats_available ?? 0;
+            const isLogistics = driver.is_logistics === true || (ks || 0) <= 0;
+            if (isLogistics) {
+                return;
+            }
+
+            occupiedSeats += 1;
+            if (CarpoolManager.isDriverOutbound(driver) && CarpoolManager.passengerMatchesDirection(passenger, 'outbound')) {
+                occupiedSeatsOutbound += 1;
+            }
+            if (CarpoolManager.isDriverReturn(driver) && CarpoolManager.passengerMatchesDirection(passenger, 'return')) {
+                occupiedSeatsReturn += 1;
             }
         });
  
         drivers.forEach(driver => {
-            const seats = driver.kid_spots || driver.seats_available || 0;
+            const seats = driver.kid_spots ?? driver.seats_available ?? 0;
+            const isLogistics = driver.is_logistics === true || (seats || 0) <= 0;
+            if (isLogistics) {
+                return;
+            }
             if (CarpoolManager.isDriverOutbound(driver)) {
                 totalSeatsOutbound += seats;
             }
@@ -748,8 +778,18 @@
         if (!container) return;
 
         const metrics = computeMetrics();
+
+        // Update detailed logistics summary if present
+        updateLogisticsSummary(metrics);
+
+        const activePassengerDrivers = (state.drivers || []).filter(driver => {
+            const ks = driver.kid_spots ?? driver.seats_available ?? 0;
+            const isLogistics = driver.is_logistics === true || (ks || 0) <= 0;
+            return !isLogistics;
+        }).length;
+
         const stats = [
-            { label: 'Voitures actives', value: state.drivers.length, color: '#4CAF50' },
+            { label: 'Voitures actives', value: activePassengerDrivers, color: '#4CAF50' },
             { label: 'Places Aller', value: metrics.totalSeatsOutbound, color: '#2196F3' },
             { label: 'Places Retour', value: metrics.totalSeatsReturn, color: '#1976D2' },
             { label: 'Restantes Aller', value: metrics.remainingSeatsOutbound, color: '#9C27B0' },
@@ -768,6 +808,85 @@
 
         dom.summaryCard.style.display = 'block';
         updateExportButtonState();
+    }
+
+    function updateLogisticsSummary(metrics) {
+        const kidsFill = dom.kidsProgressFill;
+        const kidsLabel = dom.kidsProgressLabel;
+        const kidsCaption = dom.kidsProgressCaption;
+        const logisticsFill = dom.logisticsProgressFill;
+        const logisticsLabel = dom.logisticsProgressLabel;
+        const logisticsCaption = dom.logisticsProgressCaption;
+
+        if (!kidsFill || !kidsLabel || !kidsCaption || !logisticsFill || !logisticsLabel || !logisticsCaption) {
+            return;
+        }
+
+        const resetBars = () => {
+            kidsFill.style.transform = 'scaleX(0)';
+            kidsLabel.textContent = '0 / 0';
+            kidsCaption.textContent = 'En attente des confirmations parents et des affectations de voitures.';
+            logisticsFill.style.transform = 'scaleX(0)';
+            logisticsLabel.textContent = '0 / 3';
+            logisticsCaption.textContent = 'Objectif : jusqu\'à 3 voitures dédiées au matériel, sans enfants.';
+        };
+
+        if (!state.selectedOutingId) {
+            resetBars();
+            return;
+        }
+
+        const totalKids = metrics.trackedCount || 0;
+
+        if (!totalKids) {
+            kidsFill.style.transform = 'scaleX(0)';
+            kidsLabel.textContent = '0 / 0';
+            kidsCaption.textContent = 'Aucun enfant encore confirmé pour cette sortie.';
+        } else {
+            const fullyAssignedCount = totalKids - Math.max(
+                metrics.unassignedOutbound.length,
+                metrics.unassignedReturn.length
+            );
+            const ratio = Math.max(0, Math.min(1, totalKids ? fullyAssignedCount / totalKids : 0));
+
+            kidsFill.style.transform = `scaleX(${ratio.toFixed(3)})`;
+            kidsLabel.textContent = `${fullyAssignedCount} / ${totalKids}`;
+
+            if (fullyAssignedCount === totalKids && totalKids > 0) {
+                kidsCaption.textContent = 'Tous les enfants confirmés ont une voiture pour l\'aller et le retour.';
+            } else {
+                const remaining = totalKids - fullyAssignedCount;
+                kidsCaption.textContent = `${remaining} enfant(s) confirmé(s) à placer encore dans une voiture (aller et/ou retour).`;
+            }
+        }
+
+        const drivers = state.drivers || [];
+        const outboundLogistics = drivers.filter(driver => {
+            const ks = driver.kid_spots ?? driver.seats_available ?? 0;
+            const isLogistics = driver.is_logistics === true || (ks || 0) <= 0;
+            return isLogistics && CarpoolManager.isDriverOutbound(driver);
+        });
+        const returnLogistics = drivers.filter(driver => {
+            const ks = driver.kid_spots ?? driver.seats_available ?? 0;
+            const isLogistics = driver.is_logistics === true || (ks || 0) <= 0;
+            return isLogistics && CarpoolManager.isDriverReturn(driver);
+        });
+
+        const maxPerDirection = 3;
+        const totalMax = maxPerDirection * 2;
+        const totalCount = outboundLogistics.length + returnLogistics.length;
+        const logisticsRatio = Math.max(0, Math.min(1, totalCount / totalMax));
+
+        logisticsFill.style.transform = `scaleX(${logisticsRatio.toFixed(3)})`;
+        logisticsLabel.textContent = `${Math.min(totalCount, totalMax)} / ${totalMax}`;
+
+        if (totalCount === 0) {
+            logisticsCaption.textContent = 'Aucune voiture matériel déclarée pour le moment.';
+        } else if (outboundLogistics.length < maxPerDirection || returnLogistics.length < maxPerDirection) {
+            logisticsCaption.textContent = `${outboundLogistics.length} voiture(s) matériel Aller, ${returnLogistics.length} voiture(s) matériel Retour. Objectif : 3 dans chaque sens.`;
+        } else {
+            logisticsCaption.textContent = 'Objectif atteint : 3 voitures matériel/courses pour l\'aller et 3 pour le retour.';
+        }
     }
 
     function buildCarpoolCsvRows() {
@@ -886,9 +1005,11 @@
         notify('Export CSV généré.', 'success');
     }
 
-function renderDrivers() {
+    function renderDrivers() {
         const outboundContainer = dom.driversListOutbound;
         const returnContainer = dom.driversListReturn;
+        const logisticsOutboundContainer = dom.logisticsDriversListOutbound;
+        const logisticsReturnContainer = dom.logisticsDriversListReturn;
 
         if (!outboundContainer || !returnContainer) return;
 
@@ -919,8 +1040,41 @@ function renderDrivers() {
 
             const kidSpots = driver.kid_spots || driver.seats_available || 0;
             const adultSpots = driver.adult_spots || 0;
+            const isLogistics = isLogisticsDriver(driver);
+            const effectiveAdultSpots = isLogistics ? 0 : adultSpots;
             const remainingChildSeats = CarpoolManager.getRemainingSeatsForDirection(driver, state.passengers, direction);
-            const remainingAdultSeats = Math.max(0, adultSpots - adultEntries.length);
+            const remainingAdultSeats = Math.max(0, effectiveAdultSpots - adultEntries.length);
+
+            // Dedicated layout for logistics-only cars: no seat counters at all
+            if (isLogistics) {
+                return `
+                    <div class="fey-item driver-drop-zone" data-driver-id="${driver.id}" data-direction="${direction}" style="background: linear-gradient(135deg, #E8F5E8, #C8E6C9); border: 3px solid var(--c-ink-900); border-radius: var(--r-sm); padding: 1.25rem; box-shadow: 0 3px 10px rgba(0,0,0,0.1); transition: all 0.2s; margin-bottom: 1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1rem;">
+                            <div style="flex: 1;">
+                                <div style="font-size: 1.3rem; font-weight: bold; color: var(--c-forest-700); margin-bottom: 0.5rem;">
+                                    ${direction === 'outbound' ? '🚗 Aller' : '🔙 Retour'} • ${escapeHtml(driver.name || 'Conducteur')}
+                                </div>
+                                <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <span style="font-size: 1.1rem;">📱</span>
+                                        <span style="color: var(--c-ink-700); font-size: 0.95rem;">${escapeHtml(driver.phone || 'Pas de numéro')}</span>
+                                    </div>
+                                    ${driver.notes ? `<div style="font-size: 0.9rem; color: var(--c-ink-700); margin-top: 0.25rem;">${escapeHtml(driver.notes)}</div>` : ''}
+                                </div>
+                            </div>
+                            <div style="text-align: center; background: rgba(255,255,255,0.9); border: 2px solid var(--c-ink-900); border-radius: var(--r-sm); padding: 0.75rem; min-width: 200px;">
+                                <div style="font-size: 0.95rem; font-weight: 700; color: #F57C00; line-height: 1.4;">
+                                    🚚 Voiture matériel / courses<br>
+                                    <span style="font-weight: 600; color: var(--c-ink-800);">Aucune place enfant ou adulte</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; margin-top: 0.5rem; padding-top: 0.75rem; border-top: 2px dashed var(--c-ink-900);">
+                            <button type="button" class="fey-btn driver-delete-btn" data-driver-id="${driver.id}" style="background: #F44336; padding: 0.65rem 1.25rem;">🗑️ Supprimer la voiture</button>
+                        </div>
+                    </div>
+                `;
+            }
 
             return `
                 <div class="fey-item driver-drop-zone" data-driver-id="${driver.id}" data-direction="${direction}" style="background: linear-gradient(135deg, #E8F5E8, #C8E6C9); border: 3px solid var(--c-ink-900); border-radius: var(--r-sm); padding: 1.25rem; box-shadow: 0 3px 10px rgba(0,0,0,0.1); transition: all 0.2s; margin-bottom: 1rem;">
@@ -939,8 +1093,8 @@ function renderDrivers() {
                         <div style="text-align: center; background: rgba(255,255,255,0.9); border: 2px solid var(--c-ink-900); border-radius: var(--r-sm); padding: 0.75rem; min-width: 160px;">
                             <div style="font-size: 1.8rem; font-weight: bold; color: var(--c-forest-700); line-height: 1;">${passengers.length}/${kidSpots}</div>
                             <div style="font-size: 0.75rem; color: var(--c-ink-600); margin-top: 0.25rem;">Enfants ${direction === 'outbound' ? 'aller' : 'retour'}</div>
-                            <div style="margin-top: 0.5rem; font-size: 0.9rem; line-height: 1.4;">
-                                <div style="color: var(--c-ink-700); font-weight: 600;">🧑‍🤝‍🧑 ${adultEntries.length}/${adultSpots} adultes</div>
+            <div style="margin-top: 0.5rem; font-size: 0.9rem; line-height: 1.4;">
+                                <div style="color: var(--c-ink-700); font-weight: 600;">🧑‍🤝‍🧑 ${adultEntries.length}/${effectiveAdultSpots} adultes</div>
                                 <div style="color: var(--c-ink-700); font-weight: 600;">👶 ${passengers.length}/${kidSpots} enfants</div>
                             </div>
                             <div style="margin-top: 0.5rem; font-size: 0.9rem; font-weight: bold; color: ${(remainingChildSeats) > 0 ? '#2E7D32' : '#F44336'};">
@@ -949,6 +1103,7 @@ function renderDrivers() {
                             <div style="margin-top: 0.25rem; font-size: 0.9rem; font-weight: bold; color: ${(remainingAdultSeats) > 0 ? '#2E7D32' : '#F44336'};">
                                 ${remainingAdultSeats} place(s) adulte libre(s)
                             </div>
+                            ${isLogistics ? '<div style="margin-top: 0.5rem; font-size: 0.85rem; font-weight: bold; color: #F57C00;">🚚 Voiture matériel / courses (sans enfants)</div>' : ''}
                         </div>
                     </div>
                     <div style="margin-top: 1rem;">
@@ -997,16 +1152,20 @@ function renderDrivers() {
                             </div>
                         ` : '<div class="fey-note" style="margin-top: 0.5rem; padding: 1rem; text-align: center;">Aucun adulte inscrit pour ce trajet.</div>'}
                         <div style="margin-top: 0.75rem;">
-                            ${(adultSpots > 0 && remainingAdultSeats > 0) ? `
+                            ${(!isLogistics && effectiveAdultSpots > 0 && remainingAdultSeats > 0) ? `
                                 <form class="adult-add-form" data-driver-id="${driver.id}" data-direction="${direction}" style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
                                     <input type="text" name="adultName" placeholder="Nom de l'adulte" autocomplete="off" required style="flex: 1 1 220px; padding: 0.55rem 0.65rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm); font-size: 0.95rem;">
                                     <button type="submit" class="fey-btn adult-add-btn" style="background: #2E7D32; padding: 0.55rem 1rem;">Ajouter un adulte</button>
                                 </form>
+                            ` : (isLogistics ? `
+                                <div class="fey-note adult-no-slot" data-driver-id="${driver.id}" data-direction="${direction}" style="padding: 0.75rem; text-align: center; border: 2px dashed var(--c-ink-900); background: rgba(255,255,255,0.85); color: #F57C00;">
+                                    Aucune place adulte disponible (voiture matériel / courses)
+                                </div>
                             ` : `
                                 <div class="fey-note adult-no-slot" data-driver-id="${driver.id}" data-direction="${direction}" style="padding: 0.75rem; text-align: center; border: 2px dashed var(--c-ink-900); background: rgba(255,255,255,0.85); color: #F44336;">
                                     Aucune place adulte disponible
                                 </div>
-                            `}
+                            `)}
                             <div class="adult-error-message" data-driver-id="${driver.id}" data-direction="${direction}" style="display: none; margin-top: 0.5rem; color: #F44336; font-weight: bold;"></div>
                         </div>
                     </div>
@@ -1017,27 +1176,66 @@ function renderDrivers() {
             `;
         }
 
-        // Filter drivers by direction
-        const outboundDrivers = state.drivers.filter(d => CarpoolManager.isDriverOutbound(d));
+        // Helper to detect "voiture matériel / courses"
+        function isLogisticsDriver(driver) {
+            const ks = driver.kid_spots ?? driver.seats_available ?? 0;
+            const notes = (driver.notes || '').toString().toLowerCase();
+            const flaggedByNotes = notes.startsWith('voiture matériel/courses');
+            return driver.is_logistics === true || (ks || 0) <= 0 || flaggedByNotes;
+        }
 
-        const returnDrivers = state.drivers.filter(d => CarpoolManager.isDriverReturn(d));
+        // Filter drivers by direction
+        const outboundAll = state.drivers.filter(d => CarpoolManager.isDriverOutbound(d));
+        const returnAll = state.drivers.filter(d => CarpoolManager.isDriverReturn(d));
+
+        const outboundLogistics = outboundAll.filter(isLogisticsDriver);
+        const outboundRegular = outboundAll.filter(d => !isLogisticsDriver(d));
+
+        const returnLogistics = returnAll.filter(isLogisticsDriver);
+        const returnRegular = returnAll.filter(d => !isLogisticsDriver(d));
+
+        function buildDriversHtml(regularDrivers, direction) {
+            let html = '';
+
+            if (regularDrivers.length) {
+                html += regularDrivers.map(d => renderDriverCard(d, direction)).join('');
+            }
+
+            return html;
+        }
 
         // Render outbound drivers
-        if (!outboundDrivers.length) {
+        if (!outboundRegular.length && !outboundLogistics.length) {
             outboundContainer.innerHTML = '<div class="fey-note" style="text-align: center; padding: 1rem;">Aucune voiture pour l\'aller. Proposez la vôtre !</div>';
         } else {
-            outboundContainer.innerHTML = outboundDrivers.map(d => renderDriverCard(d, 'outbound')).join('');
+            outboundContainer.innerHTML = buildDriversHtml(outboundRegular, 'outbound');
+        }
+
+        if (!logisticsOutboundContainer) return;
+        if (!outboundLogistics.length) {
+            logisticsOutboundContainer.innerHTML = '<div class="fey-note" style="text-align: center; padding: 1rem;">Aucune voiture matériel pour l\'aller.</div>';
+        } else {
+            logisticsOutboundContainer.innerHTML = outboundLogistics.map(d => renderDriverCard(d, 'outbound')).join('');
         }
 
         // Render return drivers
-        if (!returnDrivers.length) {
+        if (!returnRegular.length && !returnLogistics.length) {
             returnContainer.innerHTML = '<div class="fey-note" style="text-align: center; padding: 1rem;">Aucune voiture pour le retour. Proposez la vôtre !</div>';
         } else {
-            returnContainer.innerHTML = returnDrivers.map(d => renderDriverCard(d, 'return')).join('');
+            returnContainer.innerHTML = buildDriversHtml(returnRegular, 'return');
         }
 
-        // Add event listeners
-        [outboundContainer, returnContainer].forEach(container => {
+        if (!logisticsReturnContainer) return;
+        if (!returnLogistics.length) {
+            logisticsReturnContainer.innerHTML = '<div class="fey-note" style="text-align: center; padding: 1rem;">Aucune voiture matériel pour le retour.</div>';
+        } else {
+            logisticsReturnContainer.innerHTML = returnLogistics.map(d => renderDriverCard(d, 'return')).join('');
+        }
+
+        // Add event listeners (normal + logistique)
+        [outboundContainer, returnContainer, logisticsOutboundContainer, logisticsReturnContainer]
+            .filter(Boolean)
+            .forEach(container => {
             container.querySelectorAll('.passenger-delete-btn').forEach(button => {
                 button.addEventListener('click', handlePassengerDelete);
             });
@@ -1066,6 +1264,10 @@ function renderDrivers() {
     function renderPassengerDriverOptions(currentDriverId) {
         const options = [`<option value="">Sans affectation</option>`];
         state.drivers.forEach(driver => {
+            const ks = driver.kid_spots ?? driver.seats_available ?? 0;
+            if ((ks || 0) <= 0) {
+                return;
+            }
             options.push(`<option value="${driver.id}" ${sameId(currentDriverId, driver.id) ? 'selected' : ''}>${escapeHtml(driver.name || 'Conducteur')} (${driver.seats_available || 0} places)</option>`);
         });
         return options.join('');
@@ -1084,6 +1286,10 @@ function renderDrivers() {
         fragment.appendChild(defaultOption);
 
         state.drivers.forEach(driver => {
+            const ks = driver.kid_spots ?? driver.seats_available ?? 0;
+            if ((ks || 0) <= 0) {
+                return;
+            }
             const option = document.createElement('option');
             option.value = driver.id;
             option.textContent = `${driver.name || 'Conducteur'} (${driver.seats_available || 0} places)`;
@@ -1232,6 +1438,18 @@ function renderDrivers() {
             return;
         }
 
+        const kidSpots = driver.kid_spots ?? driver.seats_available ?? 0;
+        if ((kidSpots || 0) <= 0) {
+            const message = 'Cette voiture est réservée au matériel/courses et ne peut pas transporter d\'adultes.';
+            if (errorContainer) {
+                errorContainer.textContent = message;
+                errorContainer.style.display = 'block';
+            } else {
+                notify(message, 'error');
+            }
+            return;
+        }
+
         const adultSpots = driver.adult_spots || 0;
         const assignedAdults = (state.adultParticipants || []).filter(participant => {
             if (!participant || !participant.is_adult) return false;
@@ -1299,7 +1517,16 @@ function renderDrivers() {
     async function handleDriverDelete(event) {
         const driverId = event.currentTarget.dataset.driverId;
         if (!driverId) return;
-        if (!confirm('Supprimer cette voiture ? Les enfants associés devront être réaffectés.')) {
+
+        const driver = (state.drivers || []).find(d => sameId(d.id, driverId));
+        const ks = driver?.kid_spots ?? driver?.seats_available ?? 0;
+        const notes = (driver?.notes || '').toString().toLowerCase();
+        const isLogistics = driver?.is_logistics === true || (ks || 0) <= 0 || notes.startsWith('voiture matériel/courses');
+
+        const confirmMsg = isLogistics
+            ? 'Supprimer cette voiture matériel ?'
+            : 'Supprimer cette voiture ? Les enfants associés devront être réaffectés.';
+        if (!confirm(confirmMsg)) {
             return;
         }
         try {
@@ -1321,12 +1548,57 @@ function renderDrivers() {
         const formData = new FormData(dom.driverForm);
         const outing = state.outings.find(item => item.id === state.selectedOutingId) || {};
 
-        const kidSpots = parseInt(formData.get('kidSpots'), 10) || 0;
-        const adultSpots = parseInt(formData.get('adultSpots'), 10) || 0;
+        const checkboxLogistics = formData.get('isLogistics') === 'on';
+        let kidSpots = parseInt(formData.get('kidSpots'), 10) || 0;
+        let adultSpots = parseInt(formData.get('adultSpots'), 10) || 0;
+        const selectedRoundTrip = formData.get('roundTrip') || 'aller-retour';
+        const wantsOutbound = selectedRoundTrip === 'aller-retour' || selectedRoundTrip === 'aller-seulement';
+        const wantsReturn = selectedRoundTrip === 'aller-retour' || selectedRoundTrip === 'retour-seulement';
 
-        if (kidSpots + adultSpots <= 0) {
+        // Auto-detect "voiture matériel" si les deux valeurs sont à 0,
+        // même si la case n'a pas été cochée (UX plus tolérante).
+        const autoLogistics = (kidSpots + adultSpots) === 0;
+        const isLogistics = checkboxLogistics || autoLogistics;
+
+        if (isLogistics) {
+            kidSpots = 0;
+            adultSpots = 0;
+        }
+
+        if (!isLogistics && (kidSpots + adultSpots <= 0)) {
             notify('Nombre de places invalide. Ajoutez au moins une place.', 'error');
             return;
+        }
+
+        if (isLogistics) {
+            const drivers = state.drivers || [];
+            const outboundLogistics = drivers.filter(d => {
+                const ks = d.kid_spots ?? d.seats_available ?? 0;
+                const isLogisticsDriver = d.is_logistics === true || (ks || 0) <= 0;
+                return isLogisticsDriver && CarpoolManager.isDriverOutbound(d);
+            });
+            const returnLogistics = drivers.filter(d => {
+                const ks = d.kid_spots ?? d.seats_available ?? 0;
+                const isLogisticsDriver = d.is_logistics === true || (ks || 0) <= 0;
+                return isLogisticsDriver && CarpoolManager.isDriverReturn(d);
+            });
+
+            const maxPerDirection = 3;
+            if (wantsOutbound && outboundLogistics.length >= maxPerDirection) {
+                notify('Le maximum de 3 voitures matériel/courses est déjà atteint pour l\'aller.', 'error');
+                return;
+            }
+            if (wantsReturn && returnLogistics.length >= maxPerDirection) {
+                notify('Le maximum de 3 voitures matériel/courses est déjà atteint pour le retour.', 'error');
+                return;
+            }
+        }
+
+        let notes = formData.get('driverNotes') || '';
+        if (isLogistics) {
+            notes = notes
+                ? `Voiture matériel/courses — ${notes}`
+                : 'Voiture matériel/courses';
         }
 
         const driverPayload = {
@@ -1337,10 +1609,11 @@ function renderDrivers() {
             kid_spots: kidSpots,
             adult_spots: adultSpots,
             seats_available: kidSpots, // For backward compatibility
+            is_logistics: isLogistics,
             departure_location: outing.meetingPoint || '',
-            notes: formData.get('driverNotes') || '',
-            round_trip: formData.get('roundTrip'),
-            is_round_trip: (formData.get('roundTrip') || 'aller-retour') === 'aller-retour'
+            notes,
+            round_trip: selectedRoundTrip,
+            is_round_trip: selectedRoundTrip === 'aller-retour'
         };
 
         try {
@@ -1512,6 +1785,16 @@ function renderDrivers() {
         }
 
         const driverId = dropZone.dataset.driverId;
+        const targetDriver = (state.drivers || []).find(d => sameId(d.id, driverId));
+        if (targetDriver) {
+            const ks = targetDriver.kid_spots ?? targetDriver.seats_available ?? 0;
+            if ((ks || 0) <= 0) {
+                notify('Cette voiture est réservée au matériel/courses et ne peut pas transporter d\'enfants.', 'error');
+                draggedChild = null;
+                stopDragAutoScroll();
+                return;
+            }
+        }
         const dropZoneDirection = normalizeDirection(dropZone.dataset.direction, {
             allowRoundTrip: false,
             defaultDirection: 'outbound'
@@ -1647,7 +1930,40 @@ function renderDrivers() {
         });
 
         if (dom.refreshButton) dom.refreshButton.addEventListener('click', () => loadOutings(true));
-        if (dom.driverForm) dom.driverForm.addEventListener('submit', handleDriverForm);
+
+        if (dom.driverForm) {
+            dom.driverForm.addEventListener('submit', handleDriverForm);
+
+            const kidInput = dom.driverForm.querySelector('input[name="kidSpots"]');
+            const adultInput = dom.driverForm.querySelector('input[name="adultSpots"]');
+            const logisticsCheckbox = dom.driverForm.querySelector('input[name="isLogistics"]');
+
+            if (kidInput && adultInput && logisticsCheckbox) {
+                logisticsCheckbox.addEventListener('change', () => {
+                    const isChecked = logisticsCheckbox.checked;
+
+                    if (isChecked) {
+                        // Sauvegarder les anciennes valeurs pour un éventuel retour en arrière
+                        logisticsCheckbox.dataset.prevKidSpots = kidInput.value || '4';
+                        logisticsCheckbox.dataset.prevAdultSpots = adultInput.value || '0';
+
+                        kidInput.value = '0';
+                        adultInput.value = '0';
+                        kidInput.disabled = true;
+                        adultInput.disabled = true;
+                    } else {
+                        kidInput.disabled = false;
+                        adultInput.disabled = false;
+
+                        const prevKid = logisticsCheckbox.dataset.prevKidSpots || '4';
+                        const prevAdult = logisticsCheckbox.dataset.prevAdultSpots || '0';
+                        kidInput.value = prevKid;
+                        adultInput.value = prevAdult;
+                    }
+                });
+            }
+        }
+
         if (dom.passengerForm) dom.passengerForm.addEventListener('submit', handlePassengerForm);
         if (dom.exportButton) dom.exportButton.addEventListener('click', handleCarpoolExport);
     }
@@ -1658,8 +1974,16 @@ function renderDrivers() {
         dom.outingMeta = document.getElementById('carpoolOutingMeta');
         dom.summaryCard = document.getElementById('carpoolSummaryCard');
         dom.summaryContent = document.getElementById('carpoolSummaryContent');
+        dom.kidsProgressFill = document.getElementById('carpoolKidsProgressFill');
+        dom.kidsProgressLabel = document.getElementById('carpoolKidsProgressLabel');
+        dom.kidsProgressCaption = document.getElementById('carpoolKidsProgressCaption');
+        dom.logisticsProgressFill = document.getElementById('carpoolLogisticsProgressFill');
+        dom.logisticsProgressLabel = document.getElementById('carpoolLogisticsProgressLabel');
+        dom.logisticsProgressCaption = document.getElementById('carpoolLogisticsProgressCaption');
         dom.driversListOutbound = document.getElementById('carpoolDriversListOutbound');
         dom.driversListReturn = document.getElementById('carpoolDriversListReturn');
+        dom.logisticsDriversListOutbound = document.getElementById('carpoolLogisticsDriversListOutbound');
+        dom.logisticsDriversListReturn = document.getElementById('carpoolLogisticsDriversListReturn');
         dom.unassignedOutbound = document.getElementById('carpoolUnassignedOutbound');
         dom.unassignedReturn = document.getElementById('carpoolUnassignedReturn');
         dom.driverForm = document.getElementById('carpoolDriverForm');
