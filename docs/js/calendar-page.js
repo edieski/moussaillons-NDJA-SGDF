@@ -79,7 +79,7 @@
         renderCalendar();
         renderTimeline();
 
-        setInfo(usingFallback ? "Affichage du programme 2025-2026 (les sorties Supabase ne sont pas disponibles)." : '');
+        setInfo(usingFallback ? "Programme indicatif 2025-2026 (les dates se mettent à jour automatiquement quand la connexion est disponible)." : '');
         setStatus(state.dayEvents.length === 0 ? 'Aucun événement trouvé pour le moment.' : '');
     }
 

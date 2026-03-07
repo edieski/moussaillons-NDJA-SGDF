@@ -2,10 +2,111 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>🚗 Covoiturage Scout</title>
     <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles/main.css">
+    <style>
+      /* Page covoiturage : optimisations mobile / téléphone */
+      @media (max-width: 768px) {
+        #covoiturage {
+          padding: 1rem !important;
+          padding-bottom: max(2rem, env(safe-area-inset-bottom, 0px) + 1rem);
+        }
+        #covoiturage .fey-card-header:first-of-type {
+          font-size: 1.5rem !important;
+        }
+        .carpool-select-row {
+          flex-direction: column !important;
+          align-items: stretch !important;
+          gap: 0.75rem !important;
+        }
+        .carpool-select-row select,
+        .carpool-select-row .fey-btn {
+          width: 100% !important;
+          min-height: 48px;
+          font-size: 16px;
+        }
+        #carpoolDriverForm .carpool-form-row-2,
+        #carpoolDriverForm .carpool-form-row-3,
+        #carpoolPassengerForm .carpool-form-row-2 {
+          grid-template-columns: 1fr !important;
+        }
+        #carpoolSummaryCard .carpool-summary-grid {
+          grid-template-columns: 1fr !important;
+        }
+        .carpool-progress-block {
+          min-width: 0;
+        }
+        .carpool-progress-header {
+          flex-wrap: wrap !important;
+          gap: 0.35rem !important;
+        }
+        .carpool-progress-header span:first-child {
+          flex: 1 1 100%;
+        }
+        #carpoolExportButton {
+          width: 100% !important;
+          min-width: 0 !important;
+          min-height: 48px;
+        }
+        #covoiturage .fey-card {
+          margin-bottom: 1rem;
+        }
+        #covoiturage .fey-card-header {
+          font-size: 1.15rem;
+          padding: 0.75rem 1rem;
+        }
+        #carpoolDriverForm input,
+        #carpoolDriverForm select,
+        #carpoolDriverForm textarea,
+        #carpoolPassengerForm input,
+        #carpoolPassengerForm select,
+        #carpoolPassengerForm textarea {
+          font-size: 16px !important;
+          min-height: 48px !important;
+          padding: 0.75rem 1rem !important;
+        }
+        #carpoolDriverForm textarea,
+        #carpoolPassengerForm textarea {
+          min-height: 80px;
+        }
+        #carpoolDriverForm button[type="submit"],
+        #carpoolPassengerForm button[type="submit"] {
+          min-height: 52px;
+          font-size: 1.1rem;
+        }
+        /* Placer les enfants : cartes et menu "Placer dans une voiture" */
+        .unassigned-children-grid {
+          grid-template-columns: 1fr !important;
+          gap: 1rem !important;
+          padding: 0.75rem !important;
+        }
+        .unassigned-child-card {
+          padding: 1rem !important;
+          cursor: default !important;
+        }
+        .unassigned-child-card .assign-child-driver-select {
+          min-height: 48px !important;
+          font-size: 16px !important;
+          padding: 0.75rem 0.85rem !important;
+        }
+        .assign-child-label {
+          font-size: 0.9rem !important;
+        }
+        .passenger-delete-btn,
+        .adult-remove-btn,
+        .driver-delete-btn {
+          min-height: 44px !important;
+          padding: 0.6rem 1rem !important;
+        }
+      }
+      @media (max-width: 480px) {
+        #covoiturage {
+          padding: 0.75rem !important;
+        }
+      }
+    </style>
 </head>
 <body>
     <!-- Contenu principal avec menu -->
@@ -39,7 +140,7 @@
         <!-- Sélection de sortie -->
         <div class="fey-card" id="carpoolSelectCard">
             <div class="fey-card-header">📅 Choisir la Sortie</div>
-            <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem;">
+            <div class="carpool-select-row" style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem;">
                 <select id="carpoolOutingSelect" style="flex: 1; padding: 0.75rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm); font-size: 1rem;" onchange="updateOutingQueryParam()">
                     <option value="">Choisir une sortie...</option>
                 </select>
@@ -55,7 +156,7 @@
         <!-- Résumé statistiques -->
         <div id="carpoolSummaryCard" class="fey-card" style="display: none; margin-bottom: 1.5rem;">
             <div class="fey-card-header">📊 Résumé</div>
-            <div id="carpoolSummaryContent" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;"></div>
+            <div id="carpoolSummaryContent" class="carpool-summary-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;"></div>
             <div id="carpoolLogisticsSummary" style="margin-top: 1.5rem;">
                 <div style="font-weight: bold; font-size: 1.1rem; margin-bottom: 0.5rem;">
                     🚗 Covoiturage & logistique du week-end
@@ -65,8 +166,8 @@
                     et <strong>jusqu'à 3 voitures matériel/courses</strong>. Les barres ci‑dessous montrent où nous en sommes.
                 </p>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem;">
-                    <div style="background: rgba(255,255,255,0.9); border-radius: 12px; padding: 1rem 1.25rem; border: 2px solid var(--c-ink-900);">
-                        <div style="display: flex; justify-content: space-between; gap: 0.5rem; font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 0.95rem; margin-bottom: 0.35rem;">
+                    <div class="carpool-progress-block" style="background: rgba(255,255,255,0.9); border-radius: 12px; padding: 1rem 1.25rem; border: 2px solid var(--c-ink-900);">
+                        <div class="carpool-progress-header" style="display: flex; justify-content: space-between; gap: 0.5rem; font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 0.95rem; margin-bottom: 0.35rem;">
                             <span>Enfants avec une voiture (aller & retour)</span>
                             <span id="carpoolKidsProgressLabel">0 / 0</span>
                         </div>
@@ -77,8 +178,8 @@
                             En attente des confirmations parents et des affectations de voitures.
                         </div>
                     </div>
-                    <div style="background: rgba(255,255,255,0.9); border-radius: 12px; padding: 1rem 1.25rem; border: 2px solid var(--c-ink-900);">
-                        <div style="display: flex; justify-content: space-between; gap: 0.5rem; font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 0.95rem; margin-bottom: 0.35rem;">
+                    <div class="carpool-progress-block" style="background: rgba(255,255,255,0.9); border-radius: 12px; padding: 1rem 1.25rem; border: 2px solid var(--c-ink-900);">
+                        <div class="carpool-progress-header" style="display: flex; justify-content: space-between; gap: 0.5rem; font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 0.95rem; margin-bottom: 0.35rem;">
                             <span>Voitures matériel / courses</span>
                             <span id="carpoolLogisticsProgressLabel">0 / 3</span>
                         </div>
@@ -139,7 +240,7 @@
         <div class="fey-card" style="margin-top: 1.5rem; background: linear-gradient(135deg, #E8F5E8, #C8E6C9); border-left: 4px solid #4CAF50;">
             <div class="fey-card-header">🚗 Proposer ma voiture</div>
             <form id="carpoolDriverForm" style="display: flex; flex-direction: column; gap: 1rem;">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="carpool-form-row-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                     <div>
                         <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">👤 Nom</label>
                         <input type="text" name="driverName" required style="width: 100%; padding: 0.75rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm);">
@@ -149,7 +250,7 @@
                         <input type="tel" name="driverPhone" style="width: 100%; padding: 0.75rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm);">
                     </div>
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                <div class="carpool-form-row-3" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
                     <div>
                         <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">👶 Places enfants</label>
                         <input type="number" name="kidSpots" min="0" max="10" value="4" required style="width: 100%; padding: 0.75rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm);">
@@ -196,7 +297,7 @@
                         <option value="">Choisir un enfant...</option>
                     </select>
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="carpool-form-row-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                     <div>
                         <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">👨‍👩‍👧 Parent/Tuteur</label>
                         <input type="text" name="guardianName" style="width: 100%; padding: 0.75rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm);">
@@ -206,7 +307,7 @@
                         <input type="tel" name="guardianPhone" style="width: 100%; padding: 0.75rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm);">
                     </div>
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="carpool-form-row-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                     <div>
                         <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">🚗 Voiture (optionnel)</label>
                         <select name="driverId" style="width: 100%; padding: 0.75rem; border: 2px solid var(--c-ink-900); border-radius: var(--r-sm);">

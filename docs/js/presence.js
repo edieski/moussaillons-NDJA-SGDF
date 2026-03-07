@@ -279,11 +279,14 @@
                     ${state.isAdminMode && leaderValidated ? `<div class="presence-chip presence-chip--leader">Chef OK</div>` : ''}
                 </div>
                 <div class="presence-child-actions">
-                    <label class="presence-toggle">
+                    <label class="presence-toggle ${parentConfirmed ? 'presence-toggle--checked' : ''}">
                         <input type="checkbox" class="presence-toggle-parent" ${parentConfirmed ? 'checked' : ''}>
-                        <span>Présence confirmée par les parents</span>
+                        <span class="presence-toggle-label">✓ Il ou elle vient</span>
                     </label>
-                    ${parentAt ? `<div class="presence-meta">Dernière confirmation parent : ${parentAt}</div>` : ''}
+                    <button type="button" class="presence-btn-not-coming" title="Signaler que mon enfant ne participe pas à cette sortie">
+                        <span class="presence-btn-icon">✗</span> Mon enfant ne vient pas
+                    </button>
+                    ${parentAt ? `<div class="presence-meta">Dernière confirmation : ${parentAt}</div>` : ''}
                     ${state.isAdminMode ? `
                         <label class="presence-toggle">
                             <input type="checkbox" class="presence-toggle-leader" ${leaderValidated ? 'checked' : ''}>
@@ -328,6 +331,10 @@
             if (parentToggle) {
                 parentToggle.addEventListener('change', () => handleParentToggle(card, parentToggle.checked));
             }
+            const notComingBtn = card.querySelector('.presence-btn-not-coming');
+            if (notComingBtn) {
+                notComingBtn.addEventListener('click', () => handleChildNotComing(card));
+            }
             if (state.isAdminMode) {
                 const leaderToggle = card.querySelector('.presence-toggle-leader');
                 if (leaderToggle) {
@@ -338,6 +345,12 @@
 
         renderStats();
         updateExportButtonState();
+    }
+
+    async function handleChildNotComing(card) {
+        state.notComingFromButton = true;
+        await handleParentToggle(card, false);
+        state.notComingFromButton = false;
     }
 
     async function handleParentToggle(card, confirmed) {
@@ -356,7 +369,10 @@
                 confirmed,
                 secret: state.isAdminMode && state.leaderSecret ? state.leaderSecret : null
             });
-            notify(confirmed ? `${scoutName} confirmé(e) par les parents.` : `${scoutName} retiré(e) de la confirmation parent.`, 'success');
+            const message = confirmed
+                ? `${scoutName} confirmé(e) par les parents.`
+                : (state.notComingFromButton ? `Merci, nous avons bien noté que ${scoutName} ne vient pas.` : `${scoutName} retiré(e) de la confirmation parent.`);
+            notify(message, 'success');
             await refreshRegistrations(false);
         } catch (error) {
             console.error(`${LOG_PREFIX} Erreur parent toggle`, error);
@@ -647,19 +663,55 @@
                 background: #FF9800;
                 color: white;
             }
+            .presence-child-actions {
+                display: flex;
+                flex-direction: column;
+                gap: 0.75rem;
+            }
             .presence-toggle {
                 display: flex;
                 align-items: center;
-                gap: 0.5rem;
-                font-size: 0.95rem;
+                justify-content: center;
+                gap: 0.6rem;
+                font-size: 1rem;
+                font-weight: 600;
                 color: var(--c-ink-800);
-                border: 2px dashed transparent;
-                padding: 0.4rem;
-                border-radius: var(--r-sm);
+                border: 2px solid #81C784;
+                padding: 0.75rem 1rem;
+                border-radius: 12px;
+                cursor: pointer;
+                background: rgba(129, 199, 132, 0.15);
+                transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease, transform 0.2s ease;
+                user-select: none;
+            }
+            .presence-toggle:hover {
+                background: rgba(129, 199, 132, 0.3);
+                transform: translateY(-1px);
+            }
+            .presence-toggle:has(input:focus-visible) {
+                outline: 2px solid #2E7D32;
+                outline-offset: 2px;
+            }
+            .presence-toggle.presence-toggle--checked,
+            .presence-toggle:has(input:checked) {
+                background: #2E7D32;
+                border-color: #1B5E20;
+                color: white;
+            }
+            .presence-toggle.presence-toggle--checked:hover,
+            .presence-toggle:has(input:checked):hover {
+                background: #1B5E20;
+                border-color: #0D3D0D;
             }
             .presence-toggle input[type="checkbox"] {
-                transform: scale(1.4);
-                accent-color: #2E7D32;
+                width: 1.25rem;
+                height: 1.25rem;
+                accent-color: white;
+                cursor: pointer;
+                flex-shrink: 0;
+            }
+            .presence-toggle-label {
+                pointer-events: none;
             }
             .presence-child-card.presence-loading {
                 opacity: 0.6;
@@ -668,7 +720,64 @@
             .presence-meta {
                 font-size: 0.8rem;
                 color: var(--c-ink-600);
-                margin-left: 2rem;
+                margin-left: 0;
+            }
+            .presence-btn-not-coming {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 0.5rem;
+                padding: 0.75rem 1rem;
+                font-size: 1rem;
+                font-weight: 600;
+                border: 2px solid #e57373;
+                border-radius: 12px;
+                background: rgba(229, 115, 115, 0.12);
+                color: #c62828;
+                cursor: pointer;
+                transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease, transform 0.2s ease, box-shadow 0.2s ease;
+            }
+            .presence-btn-not-coming:hover {
+                background: #e57373;
+                border-color: #c62828;
+                color: white;
+                transform: translateY(-1px);
+                box-shadow: 0 3px 10px rgba(198, 40, 40, 0.25);
+            }
+            .presence-btn-not-coming:active {
+                transform: translateY(0);
+                box-shadow: none;
+            }
+            .presence-btn-not-coming:focus-visible {
+                outline: 2px solid #c62828;
+                outline-offset: 2px;
+            }
+            .presence-btn-icon {
+                font-size: 1.1rem;
+                opacity: 0.95;
+            }
+            #presencePage .presence-btn-export,
+            .presence-btn-export {
+                background: #1E88E5;
+                padding: 0.75rem 1.5rem;
+                min-width: 220px;
+                font-size: 1rem;
+                font-weight: 600;
+                border: 2px solid #1565C0;
+                border-radius: 12px;
+                transition: background 0.25s ease, transform 0.2s ease, box-shadow 0.2s ease;
+            }
+            .presence-btn-export:hover:not(:disabled) {
+                background: #1565C0;
+                transform: translateY(-1px);
+                box-shadow: 0 3px 10px rgba(21, 101, 192, 0.3);
+            }
+            .presence-btn-export:active:not(:disabled) {
+                transform: translateY(0);
+            }
+            .presence-btn-export:focus-visible {
+                outline: 2px solid #1565C0;
+                outline-offset: 2px;
             }
         `;
         const style = document.createElement('style');
