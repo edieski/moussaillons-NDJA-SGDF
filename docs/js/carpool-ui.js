@@ -1261,15 +1261,17 @@
     }
 
 
-    /** Retourne les conducteurs ayant au moins une place enfant pour la direction donnée (hors voitures matériel). */
+    /** Retourne les conducteurs ayant au moins une place enfant pour la direction donnée (hors voitures matériel). Les voitures déjà pleines (0 place restante) n’apparaissent pas. */
     function getDriversWithCapacityForDirection(direction) {
         return (state.drivers || []).filter(driver => {
             const ks = driver.kid_spots ?? driver.seats_available ?? 0;
             if ((ks || 0) <= 0) return false;
             if (driver.is_logistics === true) return false;
-            const outbound = direction === 'outbound';
-            if (outbound && !CarpoolManager.isDriverOutbound(driver)) return false;
-            if (!outbound && !CarpoolManager.isDriverReturn(driver)) return false;
+            const doesOutbound = CarpoolManager.isDriverOutbound(driver);
+            const doesReturn = CarpoolManager.isDriverReturn(driver);
+            const noDirectionSet = !doesOutbound && !doesReturn;
+            const supportsDirection = noDirectionSet || (direction === 'outbound' ? doesOutbound : doesReturn);
+            if (!supportsDirection) return false;
             const remaining = CarpoolManager.getRemainingSeatsForDirection(driver, state.passengers, direction);
             return remaining > 0;
         });
@@ -1398,7 +1400,7 @@
             const driversWithSeats = getDriversWithCapacityForDirection(direction);
             const driverOptions = driversWithSeats.length
                 ? driversWithSeats.map(d => `<option value="${d.id}">${escapeHtml(d.name || 'Conducteur')} (${CarpoolManager.getRemainingSeatsForDirection(d, state.passengers, direction)} pl.)</option>`).join('')
-                : '';
+                : `<option value="" disabled>— Aucune voiture ${direction === 'outbound' ? 'aller' : 'retour'} —</option>`;
             return `
                 <div class="unassigned-children-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.75rem; padding: 0.5rem;">
                     ${list.map(name => {

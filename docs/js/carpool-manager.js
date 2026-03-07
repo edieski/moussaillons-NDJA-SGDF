@@ -839,7 +839,7 @@
     }
 
     function getRemainingSeatsForDirection(driver, passengers, direction) {
-        const seats = driver.seats_available || 0;
+        const seats = driver.kid_spots ?? driver.seats_available ?? 0;
         const assigned = passengers.filter(p => sameId(p.driver_id, driver.id) && passengerMatchesDirection(p, direction)).length;
         return Math.max(0, seats - assigned);
     }
