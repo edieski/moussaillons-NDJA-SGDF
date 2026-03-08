@@ -167,6 +167,7 @@
     function computeStats() {
         const totalChildren = state.children.length;
         let parentConfirmed = 0;
+        let parentNotComing = 0;
         let leaderValidated = 0;
 
         const confirmedNames = new Set();
@@ -175,6 +176,9 @@
             if (record.parent_confirmed) {
                 parentConfirmed += 1;
                 confirmedNames.add(record.scout_name);
+            }
+            if (!record.parent_confirmed && record.parent_not_coming_at) {
+                parentNotComing += 1;
             }
             if (record.leader_validated) {
                 leaderValidated += 1;
@@ -187,6 +191,10 @@
             const record = findRecordForChild(child);
             return sum + (record?.parent_confirmed ? 1 : 0);
         }, 0);
+        const filteredParentNotComing = filteredChildren.reduce((sum, child) => {
+            const record = findRecordForChild(child);
+            return sum + (!record?.parent_confirmed && record?.parent_not_coming_at ? 1 : 0);
+        }, 0);
         const filteredLeaderValidated = filteredChildren.reduce((sum, child) => {
             const record = findRecordForChild(child);
             return sum + (record?.leader_validated ? 1 : 0);
@@ -195,9 +203,11 @@
         return {
             total: totalChildren,
             parentConfirmed,
+            parentNotComing,
             leaderValidated,
             filteredCount,
             filteredParentConfirmed,
+            filteredParentNotComing,
             filteredLeaderValidated
         };
     }
@@ -214,7 +224,8 @@
         const hasFilter = stats.filteredCount < stats.total;
         const items = [
             { label: 'Enfants affichés', value: stats.filteredCount, color: '#4CAF50' },
-            { label: 'Confirmés par les parents', value: stats.filteredParentConfirmed, color: '#2196F3' }
+            { label: 'Confirmés par les parents', value: stats.filteredParentConfirmed, color: '#2196F3' },
+            { label: 'Parents : ne vient pas', value: stats.filteredParentNotComing, color: '#E57373' }
         ];
 
         if (state.isAdminMode) {
@@ -223,6 +234,7 @@
 
         if (hasFilter) {
             items.push({ label: 'Parents OK (toute la sortie)', value: stats.parentConfirmed, color: '#009688' });
+            items.push({ label: 'Parents : non (toute la sortie)', value: stats.parentNotComing, color: '#C62828' });
             if (state.isAdminMode) {
                 items.push({ label: 'Chefs OK (toute la sortie)', value: stats.leaderValidated, color: '#6A1B9A' });
             }
@@ -257,13 +269,18 @@
     function renderChildRow(child) {
         const record = findRecordForChild(child);
         const parentConfirmed = record?.parent_confirmed === true;
+        const parentNotComing = !parentConfirmed && (record?.parent_not_coming_at != null);
         const leaderValidated = record?.leader_validated === true;
         const parentAt = parentConfirmed ? formatDate(record?.parent_confirmed_at) : '';
+        const parentNotComingAt = parentNotComing ? formatDate(record?.parent_not_coming_at) : '';
         const leaderAt = leaderValidated ? formatDate(record?.leader_validated_at) : '';
 
         const baseClasses = ['presence-child-card'];
         if (parentConfirmed) {
             baseClasses.push('presence-parent-confirmed');
+        }
+        if (parentNotComing) {
+            baseClasses.push('presence-parent-not-coming');
         }
 
         const team = getChildTeam(child);
@@ -276,6 +293,7 @@
                         ${team ? `<div class="presence-child-team">Équipe : ${team}</div>` : ''}
                     </div>
                     ${parentConfirmed ? `<div class="presence-chip presence-chip--parent">Parents OK</div>` : ''}
+                    ${parentNotComing ? `<div class="presence-chip presence-chip--parent-no">Parents : non</div>` : ''}
                     ${state.isAdminMode && leaderValidated ? `<div class="presence-chip presence-chip--leader">Chef OK</div>` : ''}
                 </div>
                 <div class="presence-child-actions">
@@ -287,6 +305,7 @@
                         <span class="presence-btn-icon">✗</span> Mon enfant ne vient pas
                     </button>
                     ${parentAt ? `<div class="presence-meta">Dernière confirmation : ${parentAt}</div>` : ''}
+                    ${parentNotComingAt ? `<div class="presence-meta">Indiqué ne vient pas : ${parentNotComingAt}</div>` : ''}
                     ${state.isAdminMode ? `
                         <label class="presence-toggle">
                             <input type="checkbox" class="presence-toggle-leader" ${leaderValidated ? 'checked' : ''}>
@@ -556,19 +575,21 @@
         const outing = findSelectedOuting();
         const outingLabel = outing?.title || outing?.name || 'Sortie';
         const rows = [
-            ['Sortie', 'Nom', 'Équipe', 'Parents confirmés', 'Date confirmation parent', 'Chefs validés', 'Date validation chef']
+            ['Sortie', 'Nom', 'Équipe', 'Parents confirmés', 'Parents : ne vient pas', 'Date confirmation parent', 'Chefs validés', 'Date validation chef']
         ];
 
         filtered.forEach(child => {
             const record = findRecordForChild(child);
             const parentConfirmed = record?.parent_confirmed === true;
+            const parentNotComing = !parentConfirmed && (record?.parent_not_coming_at != null);
             const leaderValidated = record?.leader_validated === true;
             rows.push([
                 outingLabel,
                 computeChildDisplayName(child) || 'Enfant',
                 getChildTeam(child) || '',
                 parentConfirmed ? 'Oui' : 'Non',
-                parentConfirmed ? formatDate(record?.parent_confirmed_at) : '',
+                parentNotComing ? 'Oui' : 'Non',
+                parentConfirmed ? formatDate(record?.parent_confirmed_at) : (parentNotComing ? formatDate(record?.parent_not_coming_at) : ''),
                 leaderValidated ? 'Oui' : 'Non',
                 leaderValidated ? formatDate(record?.leader_validated_at) : ''
             ]);
@@ -658,6 +679,15 @@
             .presence-chip--parent {
                 background: #4CAF50;
                 color: white;
+            }
+            .presence-chip--parent-no {
+                background: #E57373;
+                color: white;
+                border-color: #C62828;
+            }
+            .presence-child-card.presence-parent-not-coming {
+                border-color: #E57373;
+                background: linear-gradient(135deg, #FFEBEE, #FFCDD2);
             }
             .presence-chip--leader {
                 background: #FF9800;

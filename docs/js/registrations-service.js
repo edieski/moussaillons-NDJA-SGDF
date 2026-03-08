@@ -58,6 +58,7 @@
             marked_by: row.marked_by || '',
             parent_confirmed: row.parent_confirmed === true,
             parent_confirmed_at: row.parent_confirmed_at || null,
+            parent_not_coming_at: row.parent_not_coming_at || null,
             leader_validated: row.leader_validated === true,
             leader_validated_at: row.leader_validated_at || null,
             raw: row
@@ -125,7 +126,7 @@
 
         const { data, error } = await client
             .from('attendance_records')
-            .select('id, outing_id, child_id, scout_name, scout_team, status, notes, marked_at, marked_by, parent_confirmed, parent_confirmed_at, leader_validated, leader_validated_at')
+            .select('id, outing_id, child_id, scout_name, scout_team, status, notes, marked_at, marked_by, parent_confirmed, parent_confirmed_at, parent_not_coming_at, leader_validated, leader_validated_at')
             .eq('outing_id', key)
             .order('scout_name', { ascending: true });
 

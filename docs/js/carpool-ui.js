@@ -889,11 +889,12 @@
         }
     }
 
-    function buildCarpoolCsvRows() {
-        if (!state.selectedOutingId) return [];
-        const outingLabel = getSelectedOutingLabel();
-        const header = ['Sortie', 'Enfant', 'Conducteur', 'Téléphone conducteur', 'Trajet(s)', 'Parent/Tuteur', 'Téléphone parent', 'Notes'];
-        const rows = [header];
+    /** Construit les données pour les deux feuilles Aller et Retour (classeur Excel). */
+    function buildCarpoolWorkbookSheets() {
+        if (!state.selectedOutingId) return { aller: [['Enfant', 'Conducteur', 'Téléphone conducteur']], retour: [['Enfant', 'Conducteur', 'Téléphone conducteur']] };
+        const header = ['Enfant', 'Conducteur', 'Téléphone conducteur'];
+        const allerRows = [header.slice()];
+        const retourRows = [header.slice()];
 
         const drivers = state.drivers || [];
         const passengers = state.passengers || [];
@@ -911,41 +912,36 @@
             });
         };
 
+        const pushRowToSheets = (label, passenger, direction) => {
+            const driver = passenger?.driver_id ? driverMap.get(normalizeId(passenger.driver_id)) : null;
+            const driverName = driver?.name || 'Non assigné';
+            const driverPhone = (driver?.phone || '').toString().trim();
+            const row = [label, driverName, driverPhone];
+            if (direction === 'outbound') allerRows.push(row);
+            else retourRows.push(row);
+        };
+
         const buildRowForChild = (label, normalizedName, childId) => {
             const relatedPassengers = resolvePassengersForChild(childId, normalizedName);
-            const directions = new Set();
-            let chosenPassenger = null;
+            const roundTripPassenger = relatedPassengers.find(p => getPassengerDirection(p) === 'round-trip');
+            const outboundPassenger = relatedPassengers.find(p => getPassengerDirection(p) === 'outbound');
+            const returnPassenger = relatedPassengers.find(p => getPassengerDirection(p) === 'return');
 
-            const priorityOrder = ['round-trip', 'outbound', 'return'];
-
-            relatedPassengers.forEach(passenger => {
-                directions.add(formatPassengerDirectionLabel(passenger));
-                if (!chosenPassenger && passenger.driver_id) {
-                    chosenPassenger = passenger;
-                }
-            });
-
-            if (!chosenPassenger) {
-                chosenPassenger = priorityOrder
-                    .map(direction => relatedPassengers.find(passenger => getPassengerDirection(passenger) === direction))
-                    .find(Boolean) || null;
+            if (roundTripPassenger) {
+                pushRowToSheets(label, roundTripPassenger, 'outbound');
+                pushRowToSheets(label, roundTripPassenger, 'return');
+                return;
             }
-
-            const driver = chosenPassenger?.driver_id ? driverMap.get(normalizeId(chosenPassenger.driver_id)) : null;
-            const directionLabel = directions.size
-                ? Array.from(directions).sort((a, b) => a.localeCompare(b)).join(' / ')
-                : 'Non attribué';
-
-            rows.push([
-                outingLabel,
-                label,
-                driver?.name || 'Non assigné',
-                formatPhoneForCsv(driver?.phone),
-                directionLabel,
-                chosenPassenger?.guardian_name || '',
-                formatPhoneForCsv(chosenPassenger?.guardian_phone),
-                chosenPassenger?.notes || ''
-            ]);
+            if (outboundPassenger) {
+                pushRowToSheets(label, outboundPassenger, 'outbound');
+            }
+            if (returnPassenger) {
+                pushRowToSheets(label, returnPassenger, 'return');
+            }
+            if (!roundTripPassenger && !outboundPassenger && !returnPassenger) {
+                allerRows.push([label, 'Non assigné', '']);
+                retourRows.push([label, 'Non assigné', '']);
+            }
         };
 
         const processedKeys = new Set();
@@ -972,20 +968,26 @@
             buildRowForChild(label, normalized, passenger.child_id || null);
         });
 
-        rows.splice(1, rows.length - 1, ...rows.slice(1).sort((a, b) => a[1].localeCompare(b[1], 'fr', { sensitivity: 'base' })));
-
-        return rows;
+        const sortRows = (r) => {
+            if (r.length <= 2) return r;
+            const data = r.slice(1).sort((a, b) => (a[0] || '').localeCompare(b[0] || '', 'fr', { sensitivity: 'base' }));
+            return [r[0], ...data];
+        };
+        return {
+            aller: sortRows(allerRows),
+            retour: sortRows(retourRows)
+        };
     }
 
     function updateExportButtonState() {
-        if (!dom.exportButton) return;
         const hasData = Boolean(state.selectedOutingId) &&
             (
                 (state.drivers && state.drivers.length > 0) ||
                 (state.passengers && state.passengers.length > 0) ||
                 (state.confirmedRoster && state.confirmedRoster.length > 0)
             );
-        dom.exportButton.disabled = !hasData;
+        if (dom.exportButton) dom.exportButton.disabled = !hasData;
+        if (dom.exportPdfButton) dom.exportPdfButton.disabled = !hasData;
     }
 
     function handleCarpoolExport() {
@@ -993,16 +995,152 @@
             notify('Sélectionnez une sortie avant d\'exporter.', 'warning');
             return;
         }
-        const rows = buildCarpoolCsvRows();
-        if (rows.length <= 1) {
+        const sheets = buildCarpoolWorkbookSheets();
+        const hasData = sheets.aller.length > 1 || sheets.retour.length > 1;
+        if (!hasData) {
             notify('Aucune donnée à exporter pour cette sortie.', 'info');
             return;
         }
         const outing = findSelectedOuting();
         const slugSource = outing?.slug || outing?.id || outing?.title || state.selectedOutingId || 'covoiturage';
         const slug = slugSource.toString().toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');
-        downloadCsv(`covoiturage_${slug}.csv`, rows);
-        notify('Export CSV généré.', 'success');
+
+        if (typeof XLSX !== 'undefined') {
+            const wb = XLSX.utils.book_new();
+            const wsAller = XLSX.utils.aoa_to_sheet(sheets.aller);
+            const wsRetour = XLSX.utils.aoa_to_sheet(sheets.retour);
+            XLSX.utils.book_append_sheet(wb, wsAller, 'Aller');
+            XLSX.utils.book_append_sheet(wb, wsRetour, 'Retour');
+            XLSX.writeFile(wb, `covoiturage_${slug}.xlsx`);
+            notify('Classeur Excel généré.', 'success');
+        } else {
+            downloadCsv(`covoiturage_${slug}_aller.csv`, sheets.aller);
+            if (sheets.retour.length > 1) {
+                downloadCsv(`covoiturage_${slug}_retour.csv`, sheets.retour);
+            }
+            notify('Export CSV généré (2 fichiers).', 'success');
+        }
+    }
+
+    /** Force le texte en ASCII pur pour le PDF (jsPDF affiche mal l’UTF-8 : symboles bizarres et espaces entre les lettres). */
+    function pdfSafeText(str) {
+        if (str == null || str === '') return '';
+        const map = {
+            '&': ' et ', '\u00e0': 'a', '\u00e2': 'a', '\u00e4': 'a', '\u00e9': 'e', '\u00e8': 'e', '\u00ea': 'e', '\u00eb': 'e',
+            '\u00ee': 'i', '\u00ef': 'i', '\u00f4': 'o', '\u00f6': 'o', '\u00f9': 'u', '\u00fb': 'u', '\u00fc': 'u', '\u00e7': 'c',
+            '\u0153': 'oe', '\u00e6': 'ae', '\u2014': ' - ', '\u201c': '"', '\u201d': '"', '\u2018': "'", '\u2019': "'"
+        };
+        let s = String(str).replace(/^\uFEFF/, '').trim();
+        let out = '';
+        for (let i = 0; i < s.length; i++) {
+            const c = s[i];
+            const code = c.charCodeAt(0);
+            if (map[c] !== undefined) {
+                out += map[c];
+            } else if (code >= 32 && code <= 126) {
+                out += String.fromCharCode(code);
+            } else if (code > 126) {
+                const decomposed = c.normalize('NFD');
+                const base = decomposed[0];
+                if (base && base.charCodeAt(0) >= 32 && base.charCodeAt(0) <= 126) out += String.fromCharCode(base.charCodeAt(0));
+            }
+        }
+        return out.replace(/\s+/g, ' ').trim();
+    }
+
+    function handleCarpoolExportPdf() {
+        if (!state.selectedOutingId) {
+            notify('Sélectionnez une sortie avant d\'exporter.', 'warning');
+            return;
+        }
+        const sheets = buildCarpoolWorkbookSheets();
+        const hasData = sheets.aller.length > 1 || sheets.retour.length > 1;
+        if (!hasData) {
+            notify('Aucune donnée à exporter pour cette sortie.', 'info');
+            return;
+        }
+        const outing = findSelectedOuting();
+        const rawLabel = (outing && (outing.title || outing.name)) ? (outing.title || outing.name) : (getSelectedOutingLabel() || '');
+        const outingLabel = pdfSafeText(rawLabel);
+        const slugSource = outing?.slug || outing?.id || outing?.title || state.selectedOutingId || 'covoiturage';
+        const slug = slugSource.toString().toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');
+
+        const JsPDF = window.jspdf?.jsPDF || window.jsPDF;
+        if (!JsPDF || typeof JsPDF !== 'function') {
+            notify('Bibliothèque PDF non disponible.', 'error');
+            return;
+        }
+        try {
+            const doc = new JsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const margin = 18;
+            let y = 20;
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(18);
+            doc.text('Covoiturage', margin, y);
+            y += 10;
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(12);
+            doc.autoTable({
+                startY: y,
+                head: [['Sortie']],
+                body: [[outingLabel || 'Sortie']],
+                margin: { left: margin },
+                tableWidth: doc.internal.pageSize.getWidth() - 2 * margin,
+                headStyles: { fillColor: [46, 125, 50], textColor: 255, fontStyle: 'bold', fontSize: 12 },
+                bodyStyles: { fontSize: 12 },
+                theme: 'plain'
+            });
+            y = doc.lastAutoTable.finalY + 14;
+
+            const head = [['Enfant', 'Conducteur', 'Telephone conducteur']].map(row => row.map(pdfSafeText));
+            const bodyAller = sheets.aller.slice(1).map(row => row.map(cell => pdfSafeText(cell)));
+            const bodyRetour = sheets.retour.slice(1).map(row => row.map(cell => pdfSafeText(cell)));
+            const tableOpts = {
+                startY: y,
+                headStyles: { fillColor: [46, 125, 50], textColor: 255, fontStyle: 'bold' },
+                alternateRowStyles: { fillColor: [245, 248, 245] },
+                margin: { left: margin },
+                tableWidth: 'auto'
+            };
+
+            if (sheets.aller.length > 1) {
+                doc.setFontSize(14);
+                doc.setFont(undefined, 'bold');
+                doc.text('Aller', margin, y);
+                y += 8;
+                doc.autoTable({
+                    ...tableOpts,
+                    head,
+                    body: bodyAller,
+                    startY: y
+                });
+                y = doc.lastAutoTable.finalY + 16;
+            }
+
+            if (sheets.retour.length > 1) {
+                if (y > 240) {
+                    doc.addPage();
+                    y = 20;
+                }
+                doc.setFontSize(14);
+                doc.setFont(undefined, 'bold');
+                doc.text('Retour', margin, y);
+                y += 8;
+                doc.autoTable({
+                    ...tableOpts,
+                    head,
+                    body: bodyRetour,
+                    startY: y
+                });
+            }
+
+            doc.save(`covoiturage_${slug}.pdf`);
+            notify('PDF généré.', 'success');
+        } catch (err) {
+            console.error(LOG_PREFIX, err);
+            notify(err.message || 'Impossible de générer le PDF.', 'error');
+        }
     }
 
     function renderDrivers() {
@@ -1990,6 +2128,7 @@
 
         if (dom.passengerForm) dom.passengerForm.addEventListener('submit', handlePassengerForm);
         if (dom.exportButton) dom.exportButton.addEventListener('click', handleCarpoolExport);
+        if (dom.exportPdfButton) dom.exportPdfButton.addEventListener('click', handleCarpoolExportPdf);
     }
 
     ready(() => {
@@ -2015,6 +2154,7 @@
         dom.passengerChildSelect = dom.passengerForm ? dom.passengerForm.querySelector('select[name="childName"]') : null;
         dom.passengerDriverSelect = dom.passengerForm ? dom.passengerForm.querySelector('select[name="driverId"]') : null;
         dom.exportButton = document.getElementById('carpoolExportButton');
+        dom.exportPdfButton = document.getElementById('carpoolExportPdfButton');
 
         if (!dom.outingSelect) {
             console.error(LOG_PREFIX, 'Initialisation interrompue: aucun select de sortie trouvé.');

@@ -102,6 +102,7 @@ create table if not exists public.attendance_records (
     parent_confirmed boolean not null default false,
     leader_validated boolean not null default false,
     parent_confirmed_at timestamptz,
+    parent_not_coming_at timestamptz,
     leader_validated_at timestamptz,
     constraint attendance_unique_participant unique (outing_id, scout_name)
 );
@@ -620,7 +621,8 @@ begin
         marked_at,
         child_id,
         parent_confirmed,
-        parent_confirmed_at
+        parent_confirmed_at,
+        parent_not_coming_at
     )
     values (
         p_outing_id,
@@ -632,7 +634,8 @@ begin
         v_now,
         p_child_id,
         p_confirmed,
-        case when p_confirmed then v_now else null end
+        case when p_confirmed then v_now else null end,
+        case when p_confirmed then null else v_now end
     )
     on conflict (outing_id, scout_name)
     do update set
@@ -642,7 +645,8 @@ begin
             when excluded.parent_confirmed = false then null
             when public.attendance_records.parent_confirmed = false and excluded.parent_confirmed = true then v_now
             else coalesce(public.attendance_records.parent_confirmed_at, v_now)
-        end
+        end,
+        parent_not_coming_at = case when excluded.parent_confirmed = false then v_now else null end
     returning * into v_record;
 
     return v_record;
